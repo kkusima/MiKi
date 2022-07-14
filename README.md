@@ -1,5 +1,5 @@
 # MiKi
-Microkinetic Model
+## Microkinetic Model
 
 
-Link to Corresponding Wiki : https://github.com/kkusima/MiKi/wiki
+### Link to Corresponding Wiki : https://github.com/kkusima/MiKi/wiki
