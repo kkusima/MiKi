@@ -1087,10 +1087,6 @@ class Fitting:
         elif plot==True:
             self.MKM.plotting(sol,solt,self.label)
             return sol,solt
-        
-    #------------------------------------------------------------------------------------------------------------------------------
-    def get_digit(self,number, n):
-    return number // 10**n % 10
     #------------------------------------------------------------------------------------------------------------------------------    
     # Cost/Minimization Functions
     #------------------------------------------------------------------------------------------------------------------------------    
@@ -1265,8 +1261,7 @@ class Fitting:
                 
             sol,solt= self.solve_coverage(t=[0,input_time[-1]],initial_cov=inp_init_covg,Tf_eval=input_time)
             Covg[i,:,:] = sol
-            print(Rate_Coeff)
-            print(Covg)
+            
         return Rate_Coeff,Covg
     #------------------------------------------------------------------------------------------------------------------------------
     def ML_model_predict(self,Covg_fit,mdl='MLPRegressor'):

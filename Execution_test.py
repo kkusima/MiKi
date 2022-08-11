@@ -1,65 +1,33 @@
 from main import *
 import numpy as np
 import matplotlib.pyplot as plt
+import sys, os
 
-
-MKM = MKModel('Atomic.csv','Stoich.csv','Param.csv')
-
-MKM.set_initial_coverages()
-
-MKM.set_rxnconditions(Pr=[1e-8,1e-8,1e-8])
-
-MKM.set_limits_of_integration()
-
-print(MKM.init_cov)
-
-# MKM.solve_coverage(t=[0,6e6])
-
-
-print(MKM.get_rates())
-print('Stoich')
-print(MKM.Stoich)
-print(len(MKM.Stoich.iloc[0,:]))
+# import tensorflow as tf
+# import torch as tf
+# from torch import nn
+# from torch.utils.data import DataLoader
+# from torchvision import datasets
+# from torchvision.transforms import ToTensor
 
 
 
-print(MKM.set_initial_coverages([0.1,0.2,0]))
+# t,covg,fits = fit.fitting_rate_param(option='ML',plot=True)
+#####CYCLIC OP#------------------------------------------------------------------------------------------------------------------------------
 
-print(MKM.Stoich.iloc[0,1])
-print('Rates')
-R = (MKM.get_ODEs(np.linspace(0,6,num=10),[0,0.1,0.1],coverage=False))
-print(R)
-print(len(R))
-print(MKM.get_rates(cov=[0,0.1,0.1]))
-# print(len(R))
-print('end')
+# MKM1 = MKModel_wCD('Atomic.csv','Stoich.csv','Param.csv') #Defining the Model
+# MKM1.set_initial_coverages(init=[0,0,0]) #Sets the initial coverages of all the surface species (Note: Empty Sites are calculated Automatically. If no option is entered, default initial coverage is zero surface species coverage on the surface)
+# MKM1.set_rxnconditions() #Sets the Pressures and Temperature as defined from the Param file. (Note: One can also enter them manually - See main.py for syntax)
+# MKM1.set_limits_of_integration(Ti=0,Tf=6e6)#Sets the reange of time used in integration
 
-print(MKM.get_rates())
-print(MKM.init_cov)
+# plt.figure()
+# sol2,solt2 = MKM1.cyclic_dynamic_transient_coverages(State1=[0.2e-9,2e-6,1e-8],State2=[0.8e-5,2e-6,1e-8],t1=2e6,t2=6e6,total_time=20e6,plot=True) #Calculate the transient response from State 1 to State 2. State conditions (Pressures) can be entered as seen in this line, or if not entered, a prompt will appear asking for the relevant state conditions
+# plt.figure()
+# sol2,solt2 = MKM1.cyclic_dynamic_transient_rates_production(State1=[0.2e-9,2e-6,1e-8],State2=[0.8e-5,2e-6,1e-8],t1=2e6,t2=6e6,total_time=20e6,plot=True) #Calculate the transient response from State 1 to State 2. State conditions (Pressures) can be entered as seen in this line, or if not entered, a prompt will appear asking for the relevant state conditions
+# plt.ylim([-0.005e-4,0.005e-4])#for use in rate of productions
 
-MKM.set_limits_of_integration()
+#####FITTING#------------------------------------------------------------------------------------------------------------------------------
+fit = Fitting('coverages.csv','Atomic.csv','Stoich.csv','Param_Guess.csv',CovgDep=False)
 
-# sol,solt= MKM.solve_coverage(t=[0,6e6],full_output=True)
-
-# plt.plot(solt,sol[:,0],solt,sol[:,1],solt,sol[:,2],solt,sol[:,3])
-
-# print(np.shape(sol)[0])
-
-print(MKM.get_SS_coverages())
-
-print(MKM.get_SS_rates_reaction())
-
-print(MKM.get_SS_rates_production())
-
-
-sol,solt = (MKM.dynamic_transient_rates_production(State1=[0.2e-9,2e-6,1e-8],State2=[0.8e-5,2e-6,1e-8],plot=True))
-# # 
-# plt.plot(solt,sol[:,0],solt,sol[:,1],solt,sol[:,2],solt,sol[:,3],solt,sol[:,4],solt,sol[:,5],solt,sol[:,6])
-
-# s = (5e-2,1e-8,1e-8)
-# print(len(s))
-print(MKM.Stoich.iloc[:,0])
-print(MKM.Atomic.columns.values[1:][0])
-print(MKM.label)
-# 0.2e-9,2e-6,1e-8
-# 0.8e-5,2e-6,1e-8
+fit.ML_data_gen()
+# t,covg,fits = fit.fitting_rate_param(option='ML',mdl='RandomForestRegressor',plot=True)
