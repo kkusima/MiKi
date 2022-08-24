@@ -1,22 +1,22 @@
-from scipy.integrate import solve_ivp   #ODE solver
-import matplotlib.pyplot as plt         #package for plotting
+import sys, os
 import numpy as np   #package for numerical arithmetics and analysis
 import pandas as pd  #package for dataframe and file extraction/creation
 import string        #package to allow for access to alphabet strings
+import math          #package to allow for the use of mathematical operators like permutation calculation
 from mpmath import * #package for precision control
 dplace=10    #Controls decimal places - used for mp.dps in mpmath precision control
+import matplotlib.pyplot as plt         #package for plotting
+from scipy.integrate import solve_ivp   #ODE solver
 from scipy import optimize
-import sys, os
-from sklearn.neural_network import MLPClassifier
-# from sklearn.preprocessing import MultiLabelBinarizer
-from sklearn import preprocessing
+from numdifftools import Jacobian, Hessian
+from autograd import jacobian, hessian
 
-# Disable
+# Disable Printing
 def blockPrint():
     sys.__stdout__ = sys.stdout
     sys.stdout = open(os.devnull, 'w')
 
-# Restore
+# Restore Printing
 def enablePrint():
     sys.stdout = sys.__stdout__
 #------------------------------------------------------------------------------------------------------------------------------    
@@ -110,7 +110,7 @@ class MKModel:
         self.Tf=Tf
         return self.Ti,self.Tf
     #------------------------------------------------------------------------------------------------------------------------------
-    def get_rates(self,cov=[]): #u = coverages (excluding empty sites) #Function used to calculate the rates of reactions
+    def get_rates(self,cov=[]): #(excluding empty sites) #Function used to calculate the rates of reactions
         
         if cov==[]:
             cov=self.init_cov
@@ -563,12 +563,12 @@ class MKModel_wCD:
         self.init_cov=self.set_initial_coverages() #Sets the initial coverage of the surface species, defaults to zero coverage but can also be set manually
         self.status='Waiting' #Used to observe the status of the ODE Convergence
         self.label='None'   #Used to pass in a label so as to know what kind of figure to plot
-    #------------------------------------------------------------------------------------------------------------------------------    
-    def check_coverages(self,vec):  #Function to check if the coverages being inputted make sense (Note in this code empty sites are not inputted, they're calculated automatically)
-        return self.MKM.check_coverages(vec)
     #------------------------------------------------------------------------------------------------------------------------------   
     def check_massbalance(self,Atomic,Stoich): #Function to check if mass is balanced
         return self.MKM.check_massbalance(self.Atomic,self.Stoich)
+    #------------------------------------------------------------------------------------------------------------------------------    
+    def check_coverages(self,vec):  #Function to check if the coverages being inputted make sense (Note in this code empty sites are not inputted, they're calculated automatically)
+        return self.MKM.check_coverages(vec)
     #------------------------------------------------------------------------------------------------------------------------------    
     def Pextract(self): #Function used for extracting pressures from the Param File
         return self.MKM.Pextract()
@@ -991,25 +991,25 @@ class Fitting:
         self.init_cov=self.set_initial_coverages() #Sets the initial coverage of the surface species, defaults to zero coverage but can also be set manually
         self.status='Waiting' #Used to observe the status of the ODE Convergence
         self.label='None'   #Used to pass in a label so as to know what kind of figure to plot
-    #------------------------------------------------------------------------------------------------------------------------------    
-    def check_coverages(self,vec):  #Function to check if the coverages being inputted make sense (Note in this code empty sites are not inputted, they're calculated automatically)
-        return self.MKM.check_coverages(vec)
     #------------------------------------------------------------------------------------------------------------------------------   
     def check_massbalance(self,Atomic,Stoich): #Function to check if mass is balanced
         return self.MKM.check_massbalance(self.Atomic,self.Stoich)
+    #------------------------------------------------------------------------------------------------------------------------------    
+    def check_coverages(self,vec):  #Function to check if the coverages being inputted make sense (Note in this code empty sites are not inputted, they're calculated automatically)
+        return self.MKM.check_coverages(vec)
     #------------------------------------------------------------------------------------------------------------------------------    
     def Pextract(self): #Function used for extracting pressures from the Param File
         return self.MKM.Pextract()
     #------------------------------------------------------------------------------------------------------------------------------
     def kextract(self): #Function used for extracting rate constants from the Param File
         return self.MKM.kextract()
+    #------------------------------------------------------------------------------------------------------------------------------
+    def set_initial_coverages(self,init=[]): #empty sites included at the end of the code
+        return self.MKM.set_initial_coverages()
     #------------------------------------------------------------------------------------------------------------------------------    
     def set_rxnconditions(self,Pr=None,Temp=None): #Function used for setting the reaction Pressure and Temperature (Currently Temperature is not in use)
         self.P,self.Temp = self.MKM.set_rxnconditions(Pr,Temp)
         return self.P,self.Temp
-    #------------------------------------------------------------------------------------------------------------------------------
-    def set_initial_coverages(self,init=[]): #empty sites included at the end of the code
-        return self.MKM.set_initial_coverages()
     #------------------------------------------------------------------------------------------------------------------------------
     def set_limits_of_integration(self,Ti=0,Tf=6e6): #Function used for setting the time limits of integration 
         self.Ti,self.Tf=self.MKM.set_limits_of_integration(Ti,Tf)
@@ -1019,7 +1019,7 @@ class Fitting:
         return self.MKM.Coeff_extract()
     #------------------------------------------------------------------------------------------------------------------------------    
     def extract(self):
-        n=30
+        n=31
         lnt = len(self.Input.iloc[:,0])
         inp_array = self.Input.to_numpy()
         dist = len(inp_array[:,0][::round(lnt/n)])
@@ -1043,7 +1043,7 @@ class Fitting:
         
         return Norm_inp
     #------------------------------------------------------------------------------------------------------------------------------      
-    def solve_coverage(self,t=[],initial_cov=[],method='BDF',reltol=1e-6,abstol=1e-8,Tf_eval=[],full_output=False,plot=False): #Function used for calculating (and plotting) single state transient coverages
+    def solve_coverage(self,t=[],initial_cov=[],method='BDF',reltol=1e-6,abstol=1e-6,Tf_eval=[],full_output=False,plot=False): #Function used for calculating (and plotting) single state transient coverages
         #Function used for solving the resulting ODEs and obtaining the corresponding surface coverages as a function of time
         #re-written for T_eval capabilities
         if t==[]:  #Condition to make sure default time is what was set initially (from self.set_limits_of_integration()) and if a different time range is entered, it will be set as the default time limits of integration
@@ -1087,10 +1087,6 @@ class Fitting:
         elif plot==True:
             self.MKM.plotting(sol,solt,self.label)
             return sol,solt
-        
-    #------------------------------------------------------------------------------------------------------------------------------
-    def get_digit(self,number, n):
-    return number // 10**n % 10
     #------------------------------------------------------------------------------------------------------------------------------    
     # Cost/Minimization Functions
     #------------------------------------------------------------------------------------------------------------------------------    
@@ -1125,12 +1121,11 @@ class Fitting:
             self.MKM.k = self.fit_params[:rw]
             self.MKM.Coeff = np.reshape(self.fit_params[rw:],(rw,colmn))
         
-        # print(self.MKM.k)    
         input_time=self.extract()[:,0]
         inp_init_covg = self.extract()[0,1:-1]
-        sol,solt= self.solve_coverage(t=[0,input_time[-1]],initial_cov=inp_init_covg,Tf_eval=input_time) #Uses MKM.getODEs, but the inclass solve_coverage to add custom time dependancies
-        dat = np.insert(sol,0,solt,axis=1)   #Merging time and parameters
-        Norm_sol = self.normalize(Ext_inp=dat)
+        sol,solt= self.solve_coverage(t=[0,input_time[-1]],initial_cov=inp_init_covg,Tf_eval=input_time,full_output=True) #Uses MKM.getODEs, but the inclass solve_coverage to add custom time dependancies
+        soldat = np.insert(sol,0,solt,axis=1)   #Merging time and parameters
+        Norm_sol = self.normalize(Ext_inp=soldat)
         
         ns = len(Norm_sol[0,1:]) #Number of species
         w = self.min_weight*np.ones(ns)
@@ -1143,6 +1138,26 @@ class Fitting:
         print(error)
         print(fit_params)
         return error
+    #------------------------------------------------------------------------------------------------------------------------------    
+    def error_func(self,fit_params):
+        self.fit_params = fit_params
+        colmn = len(self.Stoich.iloc[0,1:]) - len(self.P) - 1 #Number of columns (i.e rate coefficients = no. of surface species being investigated)
+        rw = len(self.k)
+        og = self.normalize() #Original input
+        
+        if self.CovgDep==False:
+            self.MKM.k = self.fit_params
+        elif self.CovgDep==True:
+            self.MKM.k = self.fit_params[:rw]
+            self.MKM.Coeff = np.reshape(self.fit_params[rw:],(rw,colmn))
+            
+        input_time=self.extract()[:,0]
+        inp_init_covg = self.extract()[0,1:-1]
+        sol,solt= self.solve_coverage(t=[0,input_time[-1]],initial_cov=inp_init_covg,Tf_eval=input_time) #Uses MKM.getODEs, but the inclass solve_coverage to add custom time dependancies
+        soldat = np.insert(sol,0,solt,axis=1)   #Merging time and parameters
+        Norm_sol = self.normalize(Ext_inp=soldat)
+        
+        return np.sum((og-Norm_sol)**2)
     #------------------------------------------------------------------------------------------------------------------------------    
     def CI95(self,fvec, jac): #Function to find confidence interval ############################----NEEDS FIXING----####################################################
         #Returns the 95% confidence interval on parameters
@@ -1202,57 +1217,126 @@ class Fitting:
         #max K Guess parameters
         sc = 1e3 #scaling value
         c = len(self.Stoich.iloc[0,1:]) - len(self.P) - 1 #Number of columns (i.e no. of surface species being investigated)
-             
+#---------# Bound generation method 1: Scalar Multiples#---------#---------#---------#---------#---------#---------             
         if self.CovgDep==True:
             initial_vals = np.concatenate((self.k,self.Coeff.flatten(order='F')))
             mkval = initial_vals*sc #max coeffvals
             n = len(initial_vals)
             lnk = len(self.k)
-            bounds = np.empty([c*n,2])
+            bounds1 = np.empty([c*n,2])
             for i in range(n):
-                bounds[i] = (0,mkval[i])  #Rate constants
-                bounds[lnk+i] = (-mkval[lnk+i],mkval[lnk+i]) #Rate coefficients
+                bounds1[i] = (0,mkval[i])  #Rate constants
+                bounds1[lnk+i] = (-mkval[lnk+i],mkval[lnk+i]) #Rate coefficients
         
         elif self.CovgDep==False:
             initial_vals = self.k
             mkval = initial_vals*sc #max coeffvals
             n = len(initial_vals)
-            bounds = np.empty([n,2])
+            bounds1 = np.empty([n,2])
             for i in range(n):
-                bounds[i] = (0,mkval[i]) #Rate constants
-
-        result = optimize.minimize(self.cost_func_minimize, initial_vals
-                                                    ,method=method, bounds=bounds 
+                bounds1[i] = (0,mkval[i]) #Rate constants
+#---------#---------#---------#---------#---------#---------#---------#---------#---------#---------#---------#---------    
+#---------# Bound generation method 2: Maintaining the order of magnitude of the guess values#---------#------#---------#---------                         
+        # if self.CovgDep==True:
+        #     initial_vals = np.concatenate((self.k,self.Coeff.flatten(order='F')))
+        #     n = len(initial_vals)
+        #     bounds2 = np.empty([c*n,2])
+        #     for i in range(n):
+        #         expon = math.floor(math.log(initial_vals[i], 10)) #order of magnitude of the guess values
+        #         upper = 1*10**(expon+1)
+        #         lower = 9*10**(expon-1)
+        #         bounds2[i] = (lower,upper)  #Rate constants
+        #         bounds2[lnk+i] = (lower,upper) #Rate coefficients
+        
+        # elif self.CovgDep==False:
+        #     initial_vals = self.k
+        #     n = len(initial_vals)
+        #     bounds2 = np.empty([n,2])
+        #     for i in range(n):
+        #         expon = math.floor(math.log(initial_vals[i], 10)) #order of magnitude of the guess values
+        #         upper = 1*10**(expon+1)
+        #         lower = 9*10**(expon-1)
+        #         bounds2[i] = (lower,upper)  #Rate constants
+ #---------#---------#---------#---------#---------#---------#---------#---------#---------#---------#---------#---------#---------         
+        
+        from numdifftools import Jacobian, Hessian
+        from autograd import jacobian, hessian
+        
+        def fun_der(x):
+            J = Jacobian(lambda x: self.error_func(x))(x).ravel()
+            return J 
+        
+        def fun_hess(x):
+            H = Hessian(lambda x: self.error_func(x))(x)
+            return H
+        
+        #Jacobian(self.cost_func_minimize)(initial_vals)
+        #Hessian(self.cost_func_minimize)(initial_vals)
+        
+        # result = optimize.minimize(self.cost_func_minimize, initial_vals
+        #                                             ,method=method, bounds=bounds1,tol=1e-8
+        #                                             ,jac='3-point'
+        #                                             #,hess=fun_hess
+        #                                             ,options={'gtol': gtol
+        #                                                       ,'maxfun': maxfun,'disp': False
+        #                                                       ,'maxiter': maxiter})
+        
+        result = optimize.minimize(self.error_func, initial_vals
+                                                    ,method=method, bounds=bounds1,tol=1e-10
+                                                    # ,jac= fun_der#'3-point'
+                                                    # ,hess=fun_hess
                                                     ,options={'gtol': gtol
                                                               ,'maxfun': maxfun,'disp': False
                                                               ,'maxiter': maxiter})
         
+        # result = optimize.fmin_slsqp(self.cost_func_minimize, initial_vals
+        #                                             ,bounds=bounds,iter = 100000, acc=1e-12)
+                                                    #,jac='3-ponint'
+                                                    #,hess=fun_hess               
+        #bounds=tuple(bounds)
+        #bounds=bounds[:,1]
+        
+
+        # result = optimize.differential_evolution(self.error_func,bounds=bounds1,tol=1e-3,seed=45
+        #                                             ,maxiter=2,disp=True, polish=True,workers=1)
+        enablePrint()
+        # print(fit.error_func(fit.k))
+        # print(fit.cost_func_minimize(fit.k))
+        blockPrint()
         return result
     #------------------------------------------------------------------------------------------------------------------------------
-    def ML_data_gen(self):
-        a = len(self.Stoich.iloc[0,1:]) - len(self.P) - 1 #Number of columns (i.e rate coefficients = no. of surface species being investigated)
-        b = len(self.k)
+    def ML_data_gen_1(self,n):
+        # a = len(self.Stoich.iloc[0,1:]) - len(self.P) - 1 #Number of columns (i.e rate coefficients = no. of surface species being investigated)
+        # b = len(self.k)
         og = self.normalize() #Original input
-        
+
         if self.CovgDep==True:
             rate_cvals = np.concatenate((self.k,self.Coeff.flatten(order='F')))
         elif self.CovgDep==False:
             rate_cvals = self.k
             
-        n = 20
-        
+        # enablePrint() #Enabling printing   
+        klen = len(self.k)
         # Getting Rate coefficient matrix
-        Rate_Coeff = np.zeros((n,b))
-        con = 100   #Starting at 200% increased, loop would keep going down depending on size of n
-        perc = con
-        for i in np.arange(n):
-            Rate_Coeff[i,:] = (rate_cvals)*(1+con/100)
-            con = con - (perc/n)*(1+(2*perc/2e2))
-            if any(a < 0 for a in Rate_Coeff[i,:]):
-                raise Exception('Error, rate constants generated are negative')
-
+        Rate_Coeff = np.zeros((n,klen))
+        digits = list(range(1,10)) #range of numbers from 1 to 9
+        
+        #Generating permutations of numbers from 1 to 9 to use in generating values to use for rate_coeffs 
+        import itertools
+        nums = list(set((itertools.permutations(digits))))
+        values = ((np.array(nums).flatten())[:n*klen])
+        count = 0
+        
+        for i in np.arange(n):  
+            for j in np.arange(klen):
+                expon = math.floor(math.log(self.k[j], 10)) #order of magnitude of the guess values
+                Rate_Coeff[i,j]= values[count]*10**(expon)
+                count = count + 1
+                
+            
         # Getting coverage matrix (rank 3 tensor)
-        Covg = np.zeros((n,np.shape(og[:,1:])[0],np.shape(og[:,1:])[1]))
+        Covg = np.zeros((n,og.shape[0],np.shape(og[:,1:])[1]))
+
         input_time=og[:,0]
         inp_init_covg = og[0,1:-1]
         for i in np.arange(n):
@@ -1265,61 +1349,151 @@ class Fitting:
                 
             sol,solt= self.solve_coverage(t=[0,input_time[-1]],initial_cov=inp_init_covg,Tf_eval=input_time)
             Covg[i,:,:] = sol
-            print(Rate_Coeff)
-            print(Covg)
+        # print(Rate_Coeff)
+        # blockPrint() #Enabling printing
         return Rate_Coeff,Covg
     #------------------------------------------------------------------------------------------------------------------------------
-    def ML_model_predict(self,Covg_fit,mdl='MLPRegressor'):
-        
+    def ML_model_predict(self,Covg_fit,n,filename,mdl):
+        n = int(n)
         #y = Rate_Coeff => trying to predict
         #X = Covg => the dataset
-        
-        y,X = self.ML_data_gen()
+        a = len(self.Stoich.iloc[0,1:]) - len(self.P)  #Number of surface species being investigated
+        if filename!=None and filename[-5:]!='.xlsx':  #Making sure that the Name entered has .csv attachment
+            raise Exception("Name entered must end with .xlsx ; Example ML_dataset_1.xlsx")
+  
+        if os.path.exists(filename) != True or n!=len(pd.read_excel('./'+filename, sheet_name='Rate_Coeffs')) or len(self.extract()) != len(pd.read_excel('./'+filename, sheet_name='Coverages')): #if the ML_data excel file doesnt exists or it doesn't have same no. of rows as the number specified, it replaces the dataset with the desired one
+            #Making the ML_data excel file and saving it into the directory
+            Rate_Coeff,Covg = self.ML_data_gen_1(n=n)
+            print('from modgen')
+            print(np.shape(Covg))
+            Rate_Coeff_df = pd.DataFrame(Rate_Coeff)
+            Covg_df = pd.DataFrame(Covg.reshape(Covg.shape[0],math.prod(Covg.shape[1:])))
+            writer = pd.ExcelWriter('./'+filename, engine='xlsxwriter')
+            Sheets = {'Rate_Coeffs': Rate_Coeff_df, 'Coverages': Covg_df}
+            for sheet_name in Sheets.keys():
+                Sheets[sheet_name].to_excel(writer, sheet_name=sheet_name,index=False)
+            writer.save()
+            #Using the values from function directly to save time.
+            y,X = Rate_Coeff,Covg
+            
+        elif os.path.exists(filename) == True and n==len(pd.read_excel('./'+filename, sheet_name='Rate_Coeffs')) : #If the ML_data excel file already exists, ML dataset wont be regenerated
+            Rate_Coeff_df = pd.read_excel('./'+filename, sheet_name='Rate_Coeffs')
+            Covg_df = pd.read_excel('./'+filename, sheet_name='Coverages')
+            Rate_Coeff = Rate_Coeff_df.to_numpy()
+            Covg = Covg_df.to_numpy().reshape(Rate_Coeff.shape[0],-1,a)
+            y,X = Rate_Coeff,Covg
+     
         X=X.reshape(X.shape[0],-1)
-
-        #print(y)  #---------------------------------------
         
         from sklearn.ensemble import RandomForestRegressor
         from sklearn.neighbors import KNeighborsRegressor
         from sklearn.tree import DecisionTreeRegressor
         from sklearn.neural_network import MLPRegressor
+        from sklearn.model_selection import train_test_split
+        from sklearn.model_selection import KFold
+        from sklearn.model_selection import cross_val_score
+
         
         if mdl == 'MLPRegressor':
-            regr = MLPRegressor(hidden_layer_sizes=(1000,500), activation='tanh', 
-                                solver='sgd',random_state=0, 
-                                max_iter=10000,alpha=5e-15,
-                                learning_rate='adaptive',tol=5e-15,shuffle=True)
+            enablePrint() #Enabling printing
+            print('-Using Algorithm: MLPRegressor | Neural Network:\n')
+            blockPrint() #Disabling printing
+            
+            hidden_layers = 10*np.ones(100)
+            hidden_layer_sizes = tuple(tuple(int(item) for item in hidden_layers))
+            regr = MLPRegressor(hidden_layer_sizes=hidden_layer_sizes,
+                                activation='logistic', 
+                                solver='lbfgs',random_state=42, 
+                                max_iter=1000,alpha=5e-6,
+                                learning_rate='adaptive',tol=5e-7,shuffle=True)
+            
+
         elif mdl == 'KNeighborsRegressor':
-            regr= KNeighborsRegressor(n_neighbors=7,weights='uniform',
-                                      algorithm='auto', leaf_size=30, 
+            enablePrint() #Enabling printing
+            print('-Using Algorithm: K Nearest Neighbor Regressor:\n')
+            blockPrint() #Disabling printing
+            
+            regr= KNeighborsRegressor(n_neighbors=5,weights='uniform',
+                                      algorithm='auto', leaf_size=15, 
                                       p=2, metric='minkowski')
             
         elif mdl == 'DecisionTreeRegressor':
-            regr = DecisionTreeRegressor(splitter='best',random_state=0)
+            enablePrint() #Enabling printing
+            print('-Using Algorithm: Decision Tree Regressor:\n')
+            blockPrint() #Disabling printing
+            
+            regr = DecisionTreeRegressor(criterion='poisson',splitter='best',
+                                         min_samples_leaf = 1,max_features='auto',
+                                         min_samples_split=10,random_state=42)
         
         elif mdl == 'RandomForestRegressor':
-            regr = RandomForestRegressor(n_estimators=100,random_state=0)  
+            enablePrint() #Enabling printing
+            print('-Using Algorithm: Random Forest Regressor:\n')
+            blockPrint() #Disabling printing
+            
+            regr = RandomForestRegressor(n_estimators=300,min_samples_leaf = 1,
+                                         max_features='auto',min_samples_split=10,
+                                         random_state=42,criterion='poisson')  
          
-        # define model
+        # Defining the model
         model = regr
-        # fit model
-        model.fit(X, y)
-        # make a prediction
-        values = model.predict(Covg_fit.reshape(1, -1))
-        print()
-        self.fit_params = abs(values.flatten())
+        
+        # Fitting the model
+        X_train, X_test, Y_train, Y_test = train_test_split(X, y, train_size=0.8, random_state=40)
+        model.fit(X_train, Y_train)
+        
+        # Evaluating the model
+        from sklearn.metrics import mean_squared_error
+        Y_pred = model.predict(X_test)
+        
+        
+        #K fold cross validation
+        # accuracy_model = []
+
+        # from sklearn.metrics import accuracy_score
+        # kf = KFold(n_splits=5)
+        # for train_index, test_index in kf.split(X):
+        #     # Split train-test
+        #     X_train, X_test = X[train_index], X[test_index]
+        #     y_train, y_test = y[train_index], y[test_index]
+        #     # Train the model
+        #     model = regr.fit(X_train, y_train)
+        #     # Append to accuracy_model the accuracy of the model
+        #     accuracy_model.append(accuracy_score(y_test, model.predict(X_test), normalize=True)*100)
+            
+    
+        enablePrint() #Enabling printing
+        # print('Scores:')
+        # scores = pd.DataFrame(accuracy_model,columns=['Scores'])
+        # import seaborn as sns
+        # sns.set(style="white", rc={"lines.linewidth": 3})
+        # sns.barplot(x=['Iter1','Iter2','Iter3','Iter4','Iter5'],y="Scores",data=scores)
+        # plt.show()
+        # sns.set()
+        MSE = mean_squared_error(Y_test, Y_pred, multioutput='raw_values')
+        print("The Model Mean Squared Errors: \n {}".format(MSE))
+        blockPrint() #Disabling printing
+   
+        # Making the prediction
+        actual_pred_values = model.predict(Covg_fit.reshape(1, -1))
+        self.fit_params = abs(actual_pred_values.flatten())
         
         return self.fit_params    
     #------------------------------------------------------------------------------------------------------------------------------
     def fitting_rate_param(self,option='cf',plot=False,method_cf='trf',method_min='L-BFGS-B',mdl='MLPRegressor'
-                           ,maxfev=1e4,xtol=1e-10,ftol=1e-8,gtol=1e-8,maxfun=1e5,maxiter=5,weight=1e2):
-
+                           ,maxfev=1e4,xtol=1e-10,ftol=1e-8,gtol=1e-8,maxfun=1e6,maxiter=1e5,weight=1e1,n=40,filename='ML_dataset.xlsx'):
+        #n is the number of rows worth of ML data, if it is changed and the present data has different rows, a new dataset will be generated with n rows 
+        
         colmn = len(self.Stoich.iloc[0,1:]) - len(self.P) - 1 #Number of columns (i.e no. of surface species being investigated)
         index = list(string.ascii_lowercase)[:colmn]
         
         og = self.normalize()
-            
+        print('\n')    
         if option=='cf':
+            print("-"*50)
+            print('Performing fitting using optimize.curve_fit:')
+            print("-"*50)
+            print('-Using Method:',method_cf)
             blockPrint() #Disable printing
             params, params_covariance = self.curve_fit_func(method=method_cf,maxfev=maxfev,xtol=xtol,ftol=ftol)
     
@@ -1330,10 +1504,14 @@ class Fitting:
             converg = np.sqrt(np.diag(params_covariance))
             
         elif option=='min':
+            print("-"*50)
+            print('Performing fitting using optimize.minimize:')
+            print("-"*50)
+            print('-Using Method:',method_min)
             blockPrint() #Disable printing
             self.min_weight= weight
-            result = self.minimizer_fit_func(method=method_min,gtol=gtol,maxfun=maxfun,maxiter=maxiter)
-            params = result.x
+            result = self.minimizer_fit_func(method=method_min,gtol=gtol,maxfun=int(maxfun),maxiter=int(maxiter))
+            params = result.x #####!!!!!!! Need to change to result.x
             
             x_values = og[:,0] #OG time values
             yfit = self.covg_func(x_values, *params)
@@ -1348,9 +1526,12 @@ class Fitting:
             # converg = self.CI95(fvec, jac)
             
         elif option=='ML':
+            print("-"*50)
+            print('Performing fitting using scikit machine learning algorithms:')
+            print("-"*50)
             blockPrint() #Disable printing
             covg_inp = og[:,1:] #Input coverage
-            result=self.ML_model_predict(covg_inp,mdl)
+            result=self.ML_model_predict(covg_inp,n,filename,mdl)
             params=result
             
             x_values = og[:,0] #OG time values
@@ -1378,7 +1559,7 @@ class Fitting:
         # if self.CovgDep==True:
         #     for i in np.arange(colmn):
         #         print('-> %s constants:\n'%(str(index[i])),converg[(i+1)*n:(i+2)*n])
-         
+        self.fitted_k = params
         # Plotting
         if plot==False:    
             return time,covg_og,covg_fit
