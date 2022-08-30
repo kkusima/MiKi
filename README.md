@@ -1,3 +1,7 @@
+[![Build Status](https://img.shields.io/badge/build-incomplete-red)]()
+[![Software License]([https://img.shields.io/badge/license-GPLv3-brightgreen.svg?style=flat-square](https://img.shields.io/badge/license-GPL--3.0%20license-red))](COPYING.txt)
+[![Documentation Status]([https://readthedocs.org/projects/catmap/badge/?version=latest](https://img.shields.io/badge/Documentation%20Status-complete-red))]([http://catmap.readthedocs.org/en/latest/?badge=latest](https://github.com/kkusima/MiKi/wiki))
+
 # MiKi
 ## Microkinetic Model
 
