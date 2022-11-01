@@ -15,16 +15,12 @@ import sys, os
 # t,covg,fits = fit.fitting_rate_param(option='ML',plot=True)
 #####CYCLIC OP#------------------------------------------------------------------------------------------------------------------------------
 
-MKM1 = MKModel('Atomic_1.csv','Stoich_1.csv','Param_1.csv') #Defining the Model
+MKM1 = Fitting('KMC_Coverages.csv','Atomic_1.csv','Stoich_1.csv','Param_1.csv') #Defining the Model
 MKM1.set_initial_coverages(init=[0,0,0,1]) #Sets the initial coverages of all the surface species (Note: Empty Sites are calculated Automatically. If no option is entered, default initial coverage is zero surface species coverage on the surface)
 MKM1.set_rxnconditions() #Sets the Pressures and Temperature as defined from the Param file. (Note: One can also enter them manually - See main.py for syntax)
 MKM1.set_limits_of_integration(Ti=0,Tf=6e6)#Sets the reange of time used in integration
-sol1,solt1= MKM1.solve_coverage(plot=True) #Obtains the coverages(sol) with respect to time(solt) and plots them if plot=True (Note: Additional options can be set manually - See main.py for syntax)
-
-(MKM1.get_SS_coverages()) #Printing the Steady state coverages (Note: Additional options can be set manually - See main.py for syntax)
-
-
-solb1,soltb1 = MKM1.dynamic_transient_rates_production(State1=[0.2e-9,2e-6,1e-8],State2=[0.8e-5,2e-6,1e-8],plot=True) #Calculate the transient response from State 1 to State 2. State conditions (Pressures) can be entered as seen in this line, or if not entered, a prompt will appear asking for the relevant state conditions
+print(MKM1.k)
+print( MKM1.covg_func(MKM1.k) ) #Obtains the coverages(sol) with respect to time(solt) and plots them if plot=True (Note: Additional options can be set manually - See main.py for syntax)
 
 
 # MKM1.set_initial_coverages(init=[0,0,0,1]) #Sets the initial coverages of all the surface species (Note: Empty Sites are calculated Automatically. If no option is entered, default initial coverage is zero surface species coverage on the surface)

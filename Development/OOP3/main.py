@@ -646,21 +646,20 @@ class MKModel:
 #------------------------------------------------------------------------------------------------------------------------------    
 class Fitting:    
     def __init__(self,Input_csv,Atomic_csv,Stoich_csv,Param_Guess_csv,CovgDep=False): #Inputs necessary to initialize the MK Model
+        self.MKM = MKModel(Atomic_csv,Stoich_csv,Param_Guess_csv) #Initializing the MF-MK Model
+        
         self.Input = pd.read_csv(Input_csv)
         self.Atomic = pd.read_csv(Atomic_csv)     #Opening/Reading the Atomic input file needed to be read
         self.Stoich = pd.read_csv(Stoich_csv)    #Opening/Reading the Stoichiometric input file needed to be read
         self.Param_Guess = pd.read_csv(Param_Guess_csv)     #Opening/Reading the Parameter of guess input file needed to be read
-        self.CovgDep = CovgDep
-        
-        if self.CovgDep==False:
-            self.MKM = MKModel(Atomic_csv,Stoich_csv,Param_Guess_csv)
-        elif self.CovgDep==True:    
-            self.MKM = MKModel_wCD(Atomic_csv,Stoich_csv,Param_Guess_csv)
-            self.Coeff = self.Coeff_extract() #Extracting the coverage dependance coefficients
                 
         self.k = self.kextract()    #Extracting the rate constants from the Param File (Note that format of the Param File is crucial)
         self.P ,self.Temp = self.set_rxnconditions() #Setting reaction conditions (defaulted to values from the Param File but can also be set mannually )
         self.Ti,self.Tf=self.set_limits_of_integration() #Sets the range of time needed to solve for the relavant MK ODEs, defaults to 0-6e6 but can also be manually set
+        self.rate_const_correction = 'None' #Accounting for correction to the rate constants (i.e. enhancing the mean field approximation)
+        
+        self.BG_matrix='auto' #Bragg williams constant matrix
+        self.Coeff = self.Coeff_extract() #Extracting the coverage dependance coefficients
         self.init_cov=self.set_initial_coverages() #Sets the initial coverage of the surface species, defaults to zero coverage but can also be set manually
         self.n_extract = 0.5 #Nummber of points to be extracted from the input file #Defaulted to 0.5 of the total points
         self.status='Waiting' #Used to observe the status of the ODE Convergence
@@ -743,6 +742,7 @@ class Fitting:
     def solve_coverage(self,t=[],initial_cov=[],method='BDF',reltol=1e-8,abstol=1e-8,Tf_eval=[],full_output=False,plot=False): #Function used for calculating (and plotting) single state transient coverages
         #Function used for solving the resulting ODEs and obtaining the corresponding surface coverages as a function of time
         #re-written for T_eval capabilities
+        self.MKM.rate_const_correction = self.rate_const_correction
         if t==[]:  #Condition to make sure default time is what was set initially (from self.set_limits_of_integration()) and if a different time range is entered, it will be set as the default time limits of integration
             t=[self.Ti,self.Tf]  
         else:
@@ -760,6 +760,7 @@ class Fitting:
             T_eval=None
         else:
             T_eval=Tf_eval
+            
         
         solve = solve_ivp(self.MKM.get_ODEs,t_span,init,method,t_eval=T_eval,rtol=reltol,atol=abstol,dense_output=full_output) #ODE Solver
         # print(solve.message)  #Useful for debugging solver convergence
@@ -792,11 +793,11 @@ class Fitting:
         colmn = len(self.Stoich.iloc[0,1:]) - len(self.P) - 1 #Number of columns (i.e rate coefficients = no. of surface species being investigated)
         rw = len(self.k)
         
-        if self.CovgDep==False:
-            self.MKM.k = self.fit_params
-        elif self.CovgDep==True:
-            self.MKM.k = self.fit_params[:rw]
-            self.MKM.Coeff = np.reshape(self.fit_params[rw:],(rw,colmn))
+        # if self.CovgDep==False:
+        self.MKM.k = self.fit_params
+        # elif self.CovgDep==True:
+        #     self.MKM.k = self.fit_params[:rw]
+        #     self.MKM.Coeff = np.reshape(self.fit_params[rw:],(rw,colmn))
         
         input_time=self.extract()[:,0]
         inp_init_covg = self.extract()[0,1:-1]
@@ -812,11 +813,11 @@ class Fitting:
         og = self.normalize() #Original input
         klen = len(self.k)
         
-        if self.CovgDep==False:
-            self.MKM.k = self.fit_params
-        elif self.CovgDep==True:
-            self.MKM.k = self.fit_params[:klen]
-            self.MKM.Coeff = np.reshape(self.fit_params[klen:],(klen,colmn))
+        # if self.CovgDep==False:
+        self.MKM.k = self.fit_params
+        # elif self.CovgDep==True:
+        #     self.MKM.k = self.fit_params[:klen]
+        #     self.MKM.Coeff = np.reshape(self.fit_params[klen:],(klen,colmn))
         
         input_time=self.extract()[:,0]
         inp_init_covg = self.extract()[0,1:-1]
@@ -853,11 +854,11 @@ class Fitting:
         rw = len(self.k)
         og = self.normalize() #Original input
         
-        if self.CovgDep==False:
-            self.MKM.k = self.fit_params
-        elif self.CovgDep==True:
-            self.MKM.k = self.fit_params[:rw]
-            self.MKM.Coeff = np.reshape(self.fit_params[rw:],(rw,colmn))
+        # if self.CovgDep==False:
+        self.MKM.k = self.fit_params
+        # elif self.CovgDep==True:
+        #     self.MKM.k = self.fit_params[:rw]
+        #     self.MKM.Coeff = np.reshape(self.fit_params[rw:],(rw,colmn))
             
         input_time=self.extract()[:,0]
         inp_init_covg = self.extract()[0,1:-1]
@@ -899,11 +900,11 @@ class Fitting:
         x_values = values[:,0]
         y_values = np.reshape(values[:,1:],values[:,1:].size)
 
-        if self.CovgDep==True:
-            initial_vals = np.concatenate((self.k,self.Coeff.flatten(order='F')))
+        # if self.CovgDep==True:
+        #     initial_vals = np.concatenate((self.k,self.Coeff.flatten(order='F')))
                 
-        elif self.CovgDep==False:
-            initial_vals = self.k
+        # elif self.CovgDep==False:
+        initial_vals = self.k
                 
         params, params_covariance = optimize.curve_fit(self.covg_func, x_values, y_values
                                                     ,method =method, bounds=(0,1e50), maxfev=maxfev, xtol=xtol, ftol=ftol
@@ -922,23 +923,23 @@ class Fitting:
         sc = 1e3 #scaling value
         c = len(self.Stoich.iloc[0,1:]) - len(self.P) - 1 #Number of columns (i.e no. of surface species being investigated)
         
-        if self.CovgDep==True:
-            initial_vals = np.concatenate((self.k,self.Coeff.flatten(order='F')))
-            mkval = initial_vals*sc #max coeffvals
-            n = len(initial_vals)
-            lnk = len(self.k)
-            bounds1 = np.empty([c*n,2])
-            for i in range(n):
-                bounds1[i] = (0,mkval[i])  #Rate constants
-                bounds1[lnk+i] = (-mkval[lnk+i],mkval[lnk+i]) #Rate coefficients
+        # if self.CovgDep==True:
+        #     initial_vals = np.concatenate((self.k,self.Coeff.flatten(order='F')))
+        #     mkval = initial_vals*sc #max coeffvals
+        #     n = len(initial_vals)
+        #     lnk = len(self.k)
+        #     bounds1 = np.empty([c*n,2])
+        #     for i in range(n):
+        #         bounds1[i] = (0,mkval[i])  #Rate constants
+        #         bounds1[lnk+i] = (-mkval[lnk+i],mkval[lnk+i]) #Rate coefficients
         
-        elif self.CovgDep==False:
-            initial_vals = self.k
-            mkval = initial_vals*sc #max coeffvals
-            n = len(initial_vals)
-            bounds1 = np.empty([n,2])
-            for i in range(n):
-                bounds1[i] = (0,mkval[i]) #Rate constants
+        # elif self.CovgDep==False:
+        initial_vals = self.k
+        mkval = initial_vals*sc #max coeffvals
+        n = len(initial_vals)
+        bounds1 = np.empty([n,2])
+        for i in range(n):
+            bounds1[i] = (0,mkval[i]) #Rate constants
 #---------#---------#---------#---------#---------#---------#---------#---------#---------#---------#---------#---------    
 #---------# Bound generation method 2: Maintaining the order of magnitude of the guess values#---------#------#---------#---------                         
         # if self.CovgDep==True:
@@ -1018,10 +1019,10 @@ class Fitting:
         b = len(self.k)
         og = self.normalize() #Original input
         
-        if self.CovgDep==True:
-            rate_cvals = np.concatenate((self.k,self.Coeff.flatten(order='F')))
-        elif self.CovgDep==False:
-            rate_cvals = self.k
+        # if self.CovgDep==True:
+        #     rate_cvals = np.concatenate((self.k,self.Coeff.flatten(order='F')))
+        # elif self.CovgDep==False:
+        rate_cvals = self.k
             
         n = 20
         
@@ -1041,11 +1042,11 @@ class Fitting:
         inp_init_covg = og[0,1:-1]
         for i in np.arange(n):
             
-            if self.CovgDep==False:
-                self.MKM.k = Rate_Coeff[i,:]
-            elif self.CovgDep==True:
-                self.MKM.k = Rate_Coeff[i,:b]
-                self.MKM.Coeff = np.reshape(Rate_Coeff[i,b:],(b,a))
+            # if self.CovgDep==False:
+            self.MKM.k = Rate_Coeff[i,:]
+            # elif self.CovgDep==True:
+            #     self.MKM.k = Rate_Coeff[i,:b]
+            #     self.MKM.Coeff = np.reshape(Rate_Coeff[i,b:],(b,a))
                 
             sol,solt= self.solve_coverage(t=[0,input_time[-1]],initial_cov=inp_init_covg,Tf_eval=input_time)
             Covg[i,:,:] = sol
@@ -1058,10 +1059,10 @@ class Fitting:
         klen = len(self.k)
         og = self.normalize() #Original input
 
-        if self.CovgDep==True:
-            rate_cvals = np.concatenate((self.k,self.Coeff.flatten(order='F')))
-        elif self.CovgDep==False:
-            rate_cvals = self.k
+        # if self.CovgDep==True:
+        #     rate_cvals = np.concatenate((self.k,self.Coeff.flatten(order='F')))
+        # elif self.CovgDep==False:
+        rate_cvals = self.k
             
         # enablePrint() #Enabling printing   
         # Getting Rate coefficient matrix
@@ -1092,11 +1093,11 @@ class Fitting:
         inp_init_covg = og[0,1:-1]
         for i in np.arange(n):
             
-            if self.CovgDep==False:
-                self.MKM.k = Rate_Coeff[i,:]
-            elif self.CovgDep==True:
-                self.MKM.k = Rate_Coeff[i,:klen]
-                self.MKM.Coeff = np.reshape(Rate_Coeff[i,klen:],(klen,a))
+            # if self.CovgDep==False:
+            self.MKM.k = Rate_Coeff[i,:]
+            # elif self.CovgDep==True:
+            #     self.MKM.k = Rate_Coeff[i,:klen]
+            #     self.MKM.Coeff = np.reshape(Rate_Coeff[i,klen:],(klen,a))
                 
             sol,solt= self.solve_coverage(t=[0,input_time[-1]],initial_cov=inp_init_covg,Tf_eval=input_time)
             Covg[i,:,:] = sol
@@ -1108,10 +1109,10 @@ class Fitting:
         Plen = len(self.P)
         og = self.normalize() #Original input
 
-        if self.CovgDep==True:
-            rate_cvals = np.concatenate((self.k,self.Coeff.flatten(order='F')))
-        elif self.CovgDep==False:
-            rate_cvals = self.k
+        # if self.CovgDep==True:
+        #     rate_cvals = np.concatenate((self.k,self.Coeff.flatten(order='F')))
+        # elif self.CovgDep==False:
+        rate_cvals = self.k
              
         # Getting Rate coefficient matrix
         Pressures = np.zeros((n,Plen))
@@ -1347,15 +1348,15 @@ class Fitting:
         
         print('\n \033[1m' + 'Initial guess: \n'+ '\033[0m')
         print('-> Rate Constants:\n',self.k)
-        if self.CovgDep==True:
-            for i in np.arange(colmn):
-                print('-> %s constants:\n'%(str(index[i])),self.Coeff[:,i])
+        # if self.CovgDep==True:
+        #     for i in np.arange(colmn):
+        #         print('-> %s constants:\n'%(str(index[i])),self.Coeff[:,i])
         
         print('\n \033[1m' + 'Final predictions: \n'+ '\033[0m')
         print('-> Rate Constants:\n',params[0:n])
-        if self.CovgDep==True:
-            for i in np.arange(colmn):
-                print('-> %s constants:\n'%(str(index[i])),params[(i+1)*n:(i+2)*n])
+        # if self.CovgDep==True:
+        #     for i in np.arange(colmn):
+        #         print('-> %s constants:\n'%(str(index[i])),params[(i+1)*n:(i+2)*n])
                 
         # print('\n \033[1m' + 'Confidence Intervals: \n'+ '\033[0m')
         # print('-> Rate Constants:\n',converg[0:n])
