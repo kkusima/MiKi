@@ -13,16 +13,17 @@ import sys, os
 
 
 # t,covg,fits = fit.fitting_rate_param(option='ML',plot=True)
-#####CYCLIC OP#------------------------------------------------------------------------------------------------------------------------------
+#####FITTING#------------------------------------------------------------------------------------------------------------------------------
+fit = Fitting('KMC_Coverages.csv','Atomic.csv','Stoich.csv','Param.csv',CovgDep=False) #covgdep = Allowing for coverage dependance to be considered in the fit
+fit.set_limits_of_integration(fit.Input.iloc[0,0],fit.Input.iloc[-1,0])
+fit.n_extract = 0.5
 
-MKM1 = Fitting('KMC_Coverages.csv','Atomic_1.csv','Stoich_1.csv','Param_1.csv') #Defining the Model
-MKM1.set_initial_coverages(init=[0,0,0,1]) #Sets the initial coverages of all the surface species (Note: Empty Sites are calculated Automatically. If no option is entered, default initial coverage is zero surface species coverage on the surface)
-MKM1.set_rxnconditions() #Sets the Pressures and Temperature as defined from the Param file. (Note: One can also enter them manually - See main.py for syntax)
-MKM1.set_limits_of_integration(Ti=0,Tf=6e6)#Sets the reange of time used in integration
-print(MKM1.k)
-print( MKM1.covg_func(MKM1.k) ) #Obtains the coverages(sol) with respect to time(solt) and plots them if plot=True (Note: Additional options can be set manually - See main.py for syntax)
+fit.k  #Resetting the rate constants used in MK model for fitting
+t1,covg1,fits1 = fit.fitting_rate_param(option='cf',maxfev=1e5,xtol=1e-7,ftol=1e-7,plot=True) #cf stands for curve fit
+kfit1 = fit.fitted_k
 
 
+#------------------------------------------------------------------------------------------------------------------------------
 # MKM1.set_initial_coverages(init=[0,0,0,1]) #Sets the initial coverages of all the surface species (Note: Empty Sites are calculated Automatically. If no option is entered, default initial coverage is zero surface species coverage on the surface)
 # MKM1.rate_const_correction='Forced_exp_CD'
 # sol3,solt3= MKM1.solve_coverage(plot=True) #Obtains the coverages(sol) with respect to time(solt) and plots them if plot=True (Note: Additional options can be set manually - See main.py for syntax)
