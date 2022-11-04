@@ -8,6 +8,7 @@ dplace=10    #Controls decimal places - used for mp.dps in mpmath precision cont
 import matplotlib.pyplot as plt         #package for plotting
 from scipy.integrate import solve_ivp   #ODE solver
 from scipy import optimize
+from scipy.special import logsumexp
 from numdifftools import Jacobian, Hessian
 from autograd import jacobian, hessian
 
@@ -158,7 +159,7 @@ class MKModel:
             if len(Coeff) != len(Theta):
                 raise Exception('The number of the coefficients doesnt match the relevant coverages. Please make sure to check the Parameters csv file for any errors. ')
             else:
-                K = kref*np.exp(float(np.sum(np.multiply(Coeff,Theta))))  #/RT lumped into a and b assuming T is constant
+                K = kref*np.exp(float(mpf(np.sum(np.multiply(Coeff,Theta)))))  #/RT lumped into a and b assuming T is constant
                 return K
     #------------------------------------------------------------------------------------------------------------------------------
     def get_rates(self,cov=[]): #cov = coverages  #Function used to calculate the rates of reactions
@@ -573,20 +574,21 @@ class MKModel:
                 self.plotting(full_rt_p,full_time,self.label)
                 return full_rt_p,full_time
     #------------------------------------------------------------------------------------------------------------------------------
-    def create_csv(self,sol,solt,Name=None,label=None):
+    def create_csv(self,sol=[],solt=[],k_inp=[],Name=None,label=None):
         
         if label==None:
             label=self.label  #Using the most recent label
         
-        if label not in ('coverages','rates_r','rates_p'): #Making sure one of the labels is chosen (i.e not None)
-            raise Exception("The entered label is incorrect. Please insert either 'coverage' or 'rates_r' or 'rates_p' ")
+        if label not in ('coverages','rates_r','rates_p','rate_coeff'): #Making sure one of the labels is chosen (i.e not None)
+            raise Exception("The entered label is incorrect. Please insert either 'coverage' or 'rates_r' or 'rates_p' or 'rate_coeff' ")
         
         if Name!=None and Name[-4:]!='.csv':  #Making sure that the Name entered has .csv attachment
             raise Exception("Name entered must end with .csv ; Example coverages.csv")
             
-        dat = np.insert(sol,0,solt,axis=1)   #Merging time and parameters
-        dat_df = pd.DataFrame(dat)           #Creating a datframe 
-        length_entry = len(dat_df.iloc[0,:])-1  #Length of the dataframe columns
+        if (sol!=[] and solt!=[]):
+            dat = np.insert(sol,0,solt,axis=1)   #Merging time and parameters
+            dat_df = pd.DataFrame(dat)           #Creating a datframe 
+            length_entry = len(dat_df.iloc[0,:])-1  #Length of the dataframe columns
         
         if label=='coverages':
             if (length_entry != len(self.Atomic.columns.values[1+len(self.P):])) :
@@ -614,6 +616,22 @@ class MKModel:
                 dat_df.to_csv(label+'.csv', encoding='utf-8', index=False)
             else:
                 dat_df.to_csv(Name, encoding='utf-8', index=False)
+                
+        elif label=='rate_coeff':
+            if k_inp==[]:
+                k_inp=self.k  #Uses the default rate constants alreayd specified from Param File
+                datk = k_inp
+            else:
+                datk = k_inp #Uses user inputed rate constants
+            datk_df = pd.DataFrame(datk)
+            klength_entry = len(datk_df.iloc[:])
+            if klength_entry != len(self.k) :  #Check to see length of rate coefficients array is as expected
+                raise Exception('Number of rate coefficients should be:',len(self.k))
+            else:
+                if Name==None:
+                    datk_df.to_csv(label+'.csv', encoding='utf-8', index=False)
+                else:
+                    datk_df.to_csv(Name, encoding='utf-8', index=False)
     #------------------------------------------------------------------------------------------------------------------------------
     #Function responsible for plotting
     #------------------------------------------------------------------------------------------------------------------------------    
@@ -694,8 +712,8 @@ class Fitting:
     def extract(self,inp_array=[]):
         
         if self.n_extract<=1 and self.n_extract>0:
-            n_extr = int(self.n_extract*np.shape(self.Input.to_numpy())[0])
-            if n_extr<1:
+            n_extr = int(self.n_extract*np.shape(self.Input.to_numpy())[0]) #Calculating number of points to be extracted based on the percentage entered (eg. 0.7 = 70%)
+            if n_extr<=1: #Checking to see if calculating if number of points to be excited is less than or equal to 1
                 raise Exception('Percentage of input values selected is too low.')
                 
             print(self.n_extract*100,'% of the Input dataset is being extracted for fitting (i.e',n_extr,'points are being extracted for fitting)\n')
@@ -703,15 +721,15 @@ class Fitting:
             n_extr = int(self.n_extract)
             print(n_extr,' points in the Input dataset are being extracted for fitting\n')
         else:
-            raise Exception('Please enter a value from 0 to 1 to indicate percent of input data or greater than 1 for specific  number of values to be extracted.')
+            raise Exception('Please enter a value from 0 to 1 to indicate percent of input data or greater than 1 for a specific positive number to indicate the desired number of points to be extracted.')
             
         if inp_array==[]:
-            lnt = len(self.Input.iloc[:,0])
-            inp_array = self.Input.to_numpy()
+            lnt = len(self.Input.iloc[:,0]) #length of the (default) input array
+            inp_array = self.Input.to_numpy() #The default input array
         else:
-            lnt = len(inp_array[:,0])
+            lnt = len(inp_array[:,0]) #length of the inputed array
             
-        dist = len(inp_array[:,0][::round(lnt/n_extr)])
+        dist = len(inp_array[:,0][::round(lnt/n_extr)]) #length to be used to intilaize empty array
         
         Ext_inp = np.empty((dist,len(self.Input.iloc[0,:]))) #Extracted n values from input
 
@@ -736,8 +754,23 @@ class Fitting:
                 mi = min(inp[:,i])
                 ma = max(inp[:,i])
                 Norm_inp[:,i]=(inp[:,i]-mi)/(ma-mi)
-        print('Input dataset has been normalized for fitting')
         return Norm_inp
+    #------------------------------------------------------------------------------------------------------------------------------    
+    def denormalize(self,Ext_inp_denorm=[]):
+        if Ext_inp_denorm==[]:
+            norm_inp = self.normalize()  #Using the default normalized data from input csv file
+            
+        else:
+            norm_inp = self.normalize(Ext_inp=Ext_inp_denorm) #Using the concatenated sol and solt arrays from analysis (i.e soldat = np.insert(sol,0,solt,axis=1)   #Merging time and parameters)
+            
+        inp = self.extract(inp_array=[]) #Exctracted input array from Input csv file
+        
+        Denorm_inp = np.empty(np.shape(inp))
+        for i in np.arange(len(inp[0,:])):
+            mi = min(inp[:,i])
+            ma = max(inp[:,i])
+            Denorm_inp[:,i]=(norm_inp[:,i]*(ma-mi)) + mi
+        return Denorm_inp
     #------------------------------------------------------------------------------------------------------------------------------      
     def solve_coverage(self,t=[],initial_cov=[],method='BDF',reltol=1e-8,abstol=1e-8,Tf_eval=[],full_output=False,plot=False): #Function used for calculating (and plotting) single state transient coverages
         #Function used for solving the resulting ODEs and obtaining the corresponding surface coverages as a function of time
@@ -792,20 +825,16 @@ class Fitting:
         self.fit_params = fit_params
         colmn = len(self.Stoich.iloc[0,1:]) - len(self.P) - 1 #Number of columns (i.e rate coefficients = no. of surface species being investigated)
         rw = len(self.k)
-        
-        # if self.CovgDep==False:
-        self.MKM.k = self.fit_params
-        # elif self.CovgDep==True:
-        #     self.MKM.k = self.fit_params[:rw]
-        #     self.MKM.Coeff = np.reshape(self.fit_params[rw:],(rw,colmn))
-        
-        input_time=self.extract()[:,0]
+
+        self.MKM.k = self.fit_params       
+        inp_time=self.extract()[:,0] 
         inp_init_covg = self.extract()[0,1:-1]
-        sol,solt= self.solve_coverage(t=[0,input_time[-1]],initial_cov=inp_init_covg,Tf_eval=input_time,full_output=False) #Uses MKM.getODEs, but the inclass solve_coverage to add custom time dependancies
+      
+        sol,solt= self.solve_coverage(t=[0,inp_time[-1]],initial_cov=inp_init_covg,Tf_eval=inp_time,full_output=False) #Uses MKM.getODEs, but the inclass solve_coverage to add custom time dependancies
         soldat = np.insert(sol,0,solt,axis=1)   #Merging time and parameters
         Norm_sol = self.normalize(Ext_inp=soldat)
-
-        return np.reshape(Norm_sol[:,1:],Norm_sol[:,1:].size)
+        Norm_sol = np.reshape(Norm_sol[:,1:],Norm_sol[:,1:].size)
+        return Norm_sol
     #------------------------------------------------------------------------------------------------------------------------------    
     def error_func_0(self,fit_params):
         self.fit_params = fit_params
@@ -895,10 +924,10 @@ class Fitting:
     # Optimizers/Fitting Functions
     #------------------------------------------------------------------------------------------------------------------------------     
     def curve_fit_func(self,method,maxfev,xtol,ftol):
-        values = self.normalize()
+        values = self.normalize() #Normalized Input Data
 
-        x_values = values[:,0]
-        y_values = np.reshape(values[:,1:],values[:,1:].size)
+        x_values = values[:,0] #Time variables (Independent Variable)
+        y_values = np.reshape(values[:,1:],values[:,1:].size) #Dependent variable(s)
 
         # if self.CovgDep==True:
         #     initial_vals = np.concatenate((self.k,self.Coeff.flatten(order='F')))
@@ -915,7 +944,7 @@ class Fitting:
         values = self.normalize()
 
         x_values = values[:,0]
-        y_values = np.reshape(values[:,1:],values[:,1:].size)
+        y_values = values[:,1:]
         
         #Setting Bounds
         #max K Guess parameters
@@ -1280,7 +1309,7 @@ class Fitting:
         
         return self.fit_params    
     #------------------------------------------------------------------------------------------------------------------------------
-    def fitting_rate_param(self,option='cf',plot=False,method_cf='trf',method_min='L-BFGS-B',mdl='MLPRegressor'
+    def fitting_rate_param(self,option='cf',plot=False,plot_norm=False,method_cf='trf',method_min='L-BFGS-B',mdl='MLPRegressor'
                            ,maxfev=1e5,xatol=1e-4,fatol=1e-4,adaptive=False,tol = 1e-8,xtol=1e-8,ftol=1e-8,gtol=1e-8,maxfun=1e6,maxiter=1e5,weight=1e0,n=40,filename='ML_dataset.xlsx'):
         #n is the number of rows worth of ML data, if it is changed and the present data has different rows, a new dataset will be generated with n rows 
         
@@ -1342,22 +1371,37 @@ class Fitting:
             enablePrint() #Re-enable printing
             
             
-        time = og[:,0]
-        covg_og = og[:,1:]
-        n = len(self.k)
+        time = og[:,0]      #Normalized OG time values 
+        covg_og = og[:,1:]  #Normalized OG coverages
+        n = len(self.k)     #Normalized MKM fitted coverages
         
+        blockPrint()
+        normalized_data_inp = np.insert(covg_og,0,time,axis=1)
+        normalized_data_MKM = np.insert(covg_fit,0,time,axis=1)
+        
+        denormalized_data_inp = self.denormalize(Ext_inp_denorm=normalized_data_inp)
+        denormalized_data_MKM = self.denormalize(Ext_inp_denorm=normalized_data_MKM)
+        
+        time_d = denormalized_data_inp[:,0] #OG time values 
+        covg_og_d = denormalized_data_inp[:,1:] #OG coverages
+        covg_fit_d = denormalized_data_MKM[:,1:] #MKM fitted coverages
+        enablePrint()
+        
+        #####Printing out the INITIAL RATE COEFFICIENT GUESS
         print('\n \033[1m' + 'Initial guess: \n'+ '\033[0m')
         print('-> Rate Constants:\n',self.k)
         # if self.CovgDep==True:
         #     for i in np.arange(colmn):
         #         print('-> %s constants:\n'%(str(index[i])),self.Coeff[:,i])
         
+        #####Printing out the PREDICTED RATE COEFFICIENTS
         print('\n \033[1m' + 'Final predictions: \n'+ '\033[0m')
         print('-> Rate Constants:\n',params[0:n])
         # if self.CovgDep==True:
         #     for i in np.arange(colmn):
         #         print('-> %s constants:\n'%(str(index[i])),params[(i+1)*n:(i+2)*n])
                 
+        #####Printing out the CONFIDENCE INTERVALS
         # print('\n \033[1m' + 'Confidence Intervals: \n'+ '\033[0m')
         # print('-> Rate Constants:\n',converg[0:n])
         # if self.CovgDep==True:
@@ -1366,20 +1410,26 @@ class Fitting:
         
         self.fitted_k = params #Allowing for the fitted parameters to be extracted globally
         
-        # Plotting
-        if plot==False:    
-            return time,covg_og,covg_fit
+        
+        # Plotting 
+        plot_norm_title = 'Fitting rate parameters (Normalized Coverages)'
+        if plot==False:
+            if plot_norm==True:
+                self.plotting(time,covg_og,covg_fit,self.label,title=plot_norm_title) #Plotting normalized coverage-fits
+            return time_d,covg_og_d,covg_fit_d 
         elif plot==True:
-            self.plotting(time,covg_og,covg_fit,self.label)
-            return time,covg_og,covg_fit
+            if plot_norm==True:
+                self.plotting(time,covg_og,covg_fit,self.label,title=plot_norm_title) #Plotting normalized coverage-fits
+            self.plotting(time_d,covg_og_d,covg_fit_d,self.label)  #Plotting de-normalized coverage-fits
+            return time_d,covg_og_d,covg_fit_d            
     #------------------------------------------------------------------------------------------------------------------------------
     #Function responsible for plotting
     #------------------------------------------------------------------------------------------------------------------------------    
-    def plotting(self,time,covg_og,covg_fit,label):
+    def plotting(self,time,covg_og,covg_fit,label,title='Fitting rate parameters'):
         
         fig = plt.figure()
         ax = fig.add_subplot(111)
-
+            
         for i in np.arange(len(covg_og[0,:])):
             ax.plot(time, covg_og[:,i],'o')
             lbl_og = self.Atomic.columns.values[1+len(self.P):]
@@ -1389,9 +1439,12 @@ class Fitting:
             lbl_fit=[]
             for i in np.arange(len(lbl_og)):
                 lbl_fit.append(lbl_og[i]+' (fit)')
-        
+                
             ax.set_xlabel('Time, t, [s]')
             ax.set_ylabel(r"Coverage, $\theta_i, [ML]$")
-            ax.set_title('Fitting rate parameters')
+            ax.set_title(title)
             
         ax.legend(np.append(lbl_og,lbl_fit),fontsize=10, loc='upper right',facecolor='white', edgecolor ='black', framealpha=1)
+        
+        
+        
