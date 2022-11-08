@@ -159,7 +159,7 @@ class MKModel:
             if len(Coeff) != len(Theta):
                 raise Exception('The number of the coefficients doesnt match the relevant coverages. Please make sure to check the Parameters csv file for any errors. ')
             else:
-                K = kref*np.exp(float(mpf(np.sum(np.multiply(Coeff,Theta)))))  #/RT lumped into a and b assuming T is constant
+                K = kref*np.exp(float(logsumexp(np.sum(np.multiply(Coeff,Theta)))))  #/RT lumped into a and b assuming T is constant
                 return K
     #------------------------------------------------------------------------------------------------------------------------------
     def get_rates(self,cov=[]): #cov = coverages  #Function used to calculate the rates of reactions
@@ -753,7 +753,7 @@ class Fitting:
             else:
                 mi = min(inp[:,i])
                 ma = max(inp[:,i])
-                Norm_inp[:,i]=(inp[:,i]-mi)/(ma-mi)
+                Norm_inp[:,i]=(inp[:,i]-mi)/mpf(ma-mi)
         return Norm_inp
     #------------------------------------------------------------------------------------------------------------------------------    
     def denormalize(self,Ext_inp_denorm=[]):
