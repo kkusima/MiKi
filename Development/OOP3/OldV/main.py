@@ -675,7 +675,7 @@ class Fitting:
         self.P ,self.Temp = self.set_rxnconditions() #Setting reaction conditions (defaulted to values from the Param File but can also be set mannually )
         self.Ti,self.Tf=self.set_limits_of_integration() #Sets the range of time needed to solve for the relavant MK ODEs, defaults to 0-6e6 but can also be manually set
         self.rate_const_correction = 'None' #Accounting for correction to the rate constants (i.e. enhancing the mean field approximation)
-        self.MKM.rate_const_correction = self.rate_const_correction
+        
         self.BG_matrix='auto' #Bragg williams constant matrix
         self.Coeff = self.Coeff_extract() #Extracting the coverage dependance coefficients
         self.init_cov=self.set_initial_coverages() #Sets the initial coverage of the surface species, defaults to zero coverage but can also be set manually
@@ -753,8 +753,7 @@ class Fitting:
             else:
                 mi = min(inp[:,i])
                 ma = max(inp[:,i])
-                Norm_inp[:,i]=(inp[:,i]-mi)/(ma-mi)
-        print('Input dataset has been normalized for fitting')
+                Norm_inp[:,i]=(inp[:,i]-mi)/mpf(ma-mi)
         return Norm_inp
     #------------------------------------------------------------------------------------------------------------------------------    
     def denormalize(self,Ext_inp_denorm=[]):
@@ -772,11 +771,11 @@ class Fitting:
             ma = max(inp[:,i])
             Denorm_inp[:,i]=(norm_inp[:,i]*(ma-mi)) + mi
         return Denorm_inp
-    # #------------------------------------------------------------------------------------------------------------------------------      
+    #------------------------------------------------------------------------------------------------------------------------------      
     def solve_coverage(self,t=[],initial_cov=[],method='BDF',reltol=1e-8,abstol=1e-8,Tf_eval=[],full_output=False,plot=False): #Function used for calculating (and plotting) single state transient coverages
         #Function used for solving the resulting ODEs and obtaining the corresponding surface coverages as a function of time
         #re-written for T_eval capabilities
-        # self.MKM.rate_const_correction = self.rate_const_correction
+        self.MKM.rate_const_correction = self.rate_const_correction
         if t==[]:  #Condition to make sure default time is what was set initially (from self.set_limits_of_integration()) and if a different time range is entered, it will be set as the default time limits of integration
             t=[self.Ti,self.Tf]  
         else:
@@ -828,14 +827,14 @@ class Fitting:
         rw = len(self.k)
 
         self.MKM.k = self.fit_params       
-        
-        input_time=self.extract()[:,0]
+        inp_time=self.extract()[:,0] 
         inp_init_covg = self.extract()[0,1:-1]
-        sol,solt= self.solve_coverage(t=[0,input_time[-1]],initial_cov=inp_init_covg,Tf_eval=input_time,full_output=False) #Uses MKM.getODEs, but the inclass solve_coverage to add custom time dependancies
+      
+        sol,solt= self.solve_coverage(t=[0,inp_time[-1]],initial_cov=inp_init_covg,Tf_eval=inp_time,full_output=False) #Uses MKM.getODEs, but the inclass solve_coverage to add custom time dependancies
         soldat = np.insert(sol,0,solt,axis=1)   #Merging time and parameters
         Norm_sol = self.normalize(Ext_inp=soldat)
-
-        return np.reshape(Norm_sol[:,1:],Norm_sol[:,1:].size)
+        Norm_sol = np.reshape(Norm_sol[:,1:],Norm_sol[:,1:].size)
+        return Norm_sol
     #------------------------------------------------------------------------------------------------------------------------------    
     def error_func_0(self,fit_params):
         self.fit_params = fit_params
@@ -930,6 +929,10 @@ class Fitting:
         x_values = values[:,0] #Time variables (Independent Variable)
         y_values = np.reshape(values[:,1:],values[:,1:].size) #Dependent variable(s)
 
+        # if self.CovgDep==True:
+        #     initial_vals = np.concatenate((self.k,self.Coeff.flatten(order='F')))
+                
+        # elif self.CovgDep==False:
         initial_vals = self.k
                 
         params, params_covariance = optimize.curve_fit(self.covg_func, x_values, y_values
@@ -941,7 +944,7 @@ class Fitting:
         values = self.normalize()
 
         x_values = values[:,0]
-        y_values = np.reshape(values[:,1:],values[:,1:].size)
+        y_values = values[:,1:]
         
         #Setting Bounds
         #max K Guess parameters
@@ -1312,7 +1315,7 @@ class Fitting:
         
         colmn = len(self.Stoich.iloc[0,1:]) - len(self.P) - 1 #Number of columns (i.e no. of surface species being investigated)
         index = list(string.ascii_lowercase)[:colmn]
-        og = self.normalize(self.Input.to_numpy())
+        og = self.normalize()
         # blockPrint() #Preventing reprinting in jupyter
         if option=='cf':
             
@@ -1366,7 +1369,8 @@ class Fitting:
             yfit = self.covg_func(x_values, *params)
             covg_fit=yfit.reshape(np.shape(og[:,1:]))
             enablePrint() #Re-enable printing
-    
+            
+            
         time = og[:,0]      #Normalized OG time values 
         covg_og = og[:,1:]  #Normalized OG coverages
         n = len(self.k)     #Normalized MKM fitted coverages
@@ -1417,7 +1421,7 @@ class Fitting:
             if plot_norm==True:
                 self.plotting(time,covg_og,covg_fit,self.label,title=plot_norm_title) #Plotting normalized coverage-fits
             self.plotting(time_d,covg_og_d,covg_fit_d,self.label)  #Plotting de-normalized coverage-fits
-            return time_d,covg_og_d,covg_fit_d 
+            return time_d,covg_og_d,covg_fit_d            
     #------------------------------------------------------------------------------------------------------------------------------
     #Function responsible for plotting
     #------------------------------------------------------------------------------------------------------------------------------    
@@ -1441,6 +1445,4 @@ class Fitting:
             ax.set_title(title)
             
         ax.legend(np.append(lbl_og,lbl_fit),fontsize=10, loc='upper right',facecolor='white', edgecolor ='black', framealpha=1)
-        
-        
         

@@ -19,9 +19,8 @@ fit.set_limits_of_integration(fit.Input.iloc[0,0],fit.Input.iloc[-1,0])
 fit.n_extract = 0.5
 
 fit.k  #Resetting the rate constants used in MK model for fitting
-t1,covg1,fits1 = fit.fitting_rate_param(option='cf',maxfev=1e5,xtol=1e-7,ftol=1e-7,plot=True) #cf stands for curve fit
+t1,covg1,fits1 = fit.fitting_rate_param(option='cf',maxfev=1e10,xtol=1e-20,ftol=1e-20,plot=True) #cf stands for curve fit
 kfit1 = fit.fitted_k
-
 
 #------------------------------------------------------------------------------------------------------------------------------
 # MKM1.set_initial_coverages(init=[0,0,0,1]) #Sets the initial coverages of all the surface species (Note: Empty Sites are calculated Automatically. If no option is entered, default initial coverage is zero surface species coverage on the surface)
