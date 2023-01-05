@@ -25,7 +25,6 @@ fit.set_limits_of_integration(fit.Input.iloc[0,0],fit.Input.iloc[-1,0])
 fit.n_extract = 0.5
 
 rate_k = fit.k
-print(fit.Input.iloc)
 act= fit.rate_func_SSKMC(5,*rate_k)
 print(act)
 # vec_a = fit.rate_func_0(2,*rate_k)
