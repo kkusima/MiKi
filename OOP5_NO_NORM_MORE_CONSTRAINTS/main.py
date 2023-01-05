@@ -1366,15 +1366,15 @@ class Fitting:
         n = len(self.k)     # MKM fitted coverages
         
         blockPrint()
-        normalized_data_inp = np.insert(covg_og,0,time,axis=1)
-        normalized_data_MKM = np.insert(covg_fit,0,time,axis=1)
+        # normalized_data_inp = np.insert(covg_og,0,time,axis=1)
+        # normalized_data_MKM = np.insert(covg_fit,0,time,axis=1)
         
-        denormalized_data_inp = self.denormalize(Ext_inp_denorm=normalized_data_inp)
-        denormalized_data_MKM = self.denormalize(Ext_inp_denorm=normalized_data_MKM)
+        # denormalized_data_inp = self.denormalize(Ext_inp_denorm=normalized_data_inp)
+        # denormalized_data_MKM = self.denormalize(Ext_inp_denorm=normalized_data_MKM)
         
-        time_d = denormalized_data_inp[:,0] #OG time values 
-        covg_og_d = denormalized_data_inp[:,1:] #OG coverages
-        covg_fit_d = denormalized_data_MKM[:,1:] #MKM fitted coverages
+        # time_d = denormalized_data_inp[:,0] #OG time values 
+        # covg_og_d = denormalized_data_inp[:,1:] #OG coverages
+        # covg_fit_d = denormalized_data_MKM[:,1:] #MKM fitted coverages
         enablePrint()
         
         #####Printing out the INITIAL RATE COEFFICIENT GUESS
@@ -1402,16 +1402,13 @@ class Fitting:
         
         
         # Plotting 
-        plot_norm_title = 'Fitting rate parameters (Normalized Coverages)'
+        # Plotting 
+        plot_title = 'Fitting rate parameters'
         if plot==False:
-            if plot_norm==True:
-                self.plotting(time,covg_og,covg_fit,self.label,title=plot_norm_title) #Plotting normalized coverage-fits
-            return time,covg_og_d,covg_fit_d 
+            return time,covg_og,covg_fit 
         elif plot==True:
-            if plot_norm==True:
-                self.plotting(time,covg_og,covg_fit,self.label,title=plot_norm_title) #Plotting normalized coverage-fits
-            self.plotting(time_d,covg_og_d,covg_fit_d,self.label)  #Plotting de-normalized coverage-fits
-            return time,covg_og_d,covg_fit_d 
+            self.plotting(time,covg_og,covg_fit,self.label,title=plot_title) #Plotting coverage-fits
+            return time,covg_og,covg_fit 
     #------------------------------------------------------------------------------------------------------------------------------
     #Function responsible for plotting
     #------------------------------------------------------------------------------------------------------------------------------    
