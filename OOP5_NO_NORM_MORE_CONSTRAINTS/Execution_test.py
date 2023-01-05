@@ -3,12 +3,12 @@ import numpy as np   #package for numerical arithmetics and analysis
 import matplotlib.pyplot as plt
 import sys, os
 # %%
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
-plt.figure()
-x = [1, 1]
-plt.plot(x)
-plt.show()
+# plt.figure()
+# x = [1, 1]
+# plt.plot(x)
+# plt.show()
 # import tensorflow as tf
 # import torch as tf
 # from torch import nn
@@ -20,14 +20,14 @@ plt.show()
 
 # t,covg,fits = fit.fitting_rate_param(option='ML',plot=True)
 #####FITTING#------------------------------------------------------------------------------------------------------------------------------
-# fit = Fitting('KMC_Steady_Kinetic_Input.csv','Atomic.csv','Stoich.csv','Param.csv') #covgdep = Allowing for coverage dependance to be considered in the fit
-# fit.set_limits_of_integration(fit.Input.iloc[0,0],fit.Input.iloc[-1,0])
-# fit.n_extract = 0.5
+fit = Fitting('KMC_Steady_Kinetic_Input.csv','Atomic.csv','Stoich.csv','Param.csv') #covgdep = Allowing for coverage dependance to be considered in the fit
+fit.set_limits_of_integration(fit.Input.iloc[0,0],fit.Input.iloc[-1,0])
+fit.n_extract = 0.5
 
-# rate_k = fit.k
-# print(fit.Input.iloc)
-# act= fit.rate_func_SSKMC(5,*rate_k)
-# print(act)
+rate_k = fit.k
+print(fit.Input.iloc)
+act= fit.rate_func_SSKMC(5,*rate_k)
+print(act)
 # vec_a = fit.rate_func_0(2,*rate_k)
 # print(len(vec_a))
 # print(np.shape(vec_a[0]))
@@ -75,3 +75,5 @@ plt.show()
 # # print(fit.k)
 # t,covg,fits = fit.fitting_rate_param(option='ML',mdl='RandomForestRegressor',maxiter=2,maxfun=1,plot=True,weight=1e0)
 
+
+# %%
