@@ -1,14 +1,15 @@
+
+# %%
 from main import *
 import numpy as np   #package for numerical arithmetics and analysis
 import matplotlib.pyplot as plt
 import sys, os
-# %%
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
-# plt.figure()
-# x = [1, 1]
-# plt.plot(x)
-# plt.show()
+plt.figure()
+x = [1, 1]
+plt.plot(x)
+plt.show()
 # import tensorflow as tf
 # import torch as tf
 # from torch import nn
