@@ -679,7 +679,7 @@ class MKModel:
             ax.set_title('Coverages versus Time')
 #------------------------------------------------------------------------------------------------------------------------------    
 class Fitting:    
-    def __init__(self,Input_csv,Atomic_csv,Stoich_csv,Param_Guess_csv,Input_Type='KMC_Steady'): #Inputs necessary to initialize the MK Model
+    def __init__(self,Input_csv,Atomic_csv,Stoich_csv,Param_Guess_csv,Input_Type='iCovg_iRates'): #Inputs necessary to initialize the MK Model
         self.MKM = MKModel(Atomic_csv,Stoich_csv,Param_Guess_csv) #Initializing the MF-MK Model
         
         self.Input = pd.read_csv(Input_csv)
@@ -700,6 +700,8 @@ class Fitting:
         self.status='Waiting' #Used to observe the status of the ODE Convergence
         self.label='None'   #Used to pass in a label so as to know what kind of figure to plot
         #Output: self.fitted_k  #Can be used to extracted an array of final fitted rate parameters
+        if self.Input_Type not in ['iCovg','iCovg_iRates']:
+            raise Exception('Input type specified is not recognised.\n Please make sure your input type is among that which is acceptable')
     #------------------------------------------------------------------------------------------------------------------------------   
     def check_massbalance(self,Atomic,Stoich): #Function to check if mass is balanced
         return self.MKM.check_massbalance(self.Atomic,self.Stoich)
@@ -737,11 +739,38 @@ class Fitting:
     def Coeff_extract(self):
         return self.MKM.Coeff_extract()
     #------------------------------------------------------------------------------------------------------------------------------    
-    def extract(self,inp_array=[]): #Note: Input and output both include time vector
-        Ncs = len(self.Stoich.iloc[0,:])-len(self.Pextract()) #No. of Surface species
+    def extract(self,inp_array=[],InputType=[]): #Note: Input and output both include time vector
+        Ncs = len(self.Stoich.iloc[0,:])-len(self.Pextract())-1 #No. of Surface species
+        Ngs = len(self.Pextract()) #No. Gaseous Species
 
-        if self.Input_Type=='KMC_Steady':
-            Input_covg_array = self.Input.iloc[:,:Ncs].to_numpy()
+        #Setting up the type of input being extracted
+        if InputType==[]:
+            InputType=self.Input_Type
+        else:
+            self.Input_Type=InputType
+
+        #Extracting Relevant Features
+        if InputType=='iCovg': #Instantaneous Coverages and Rates
+            if inp_array==[]: #If no input array is inserted, then the default input is used
+                Input_time_array = self.Input.iloc[:,0].to_numpy() #Time
+                Input_covg_array = self.Input.iloc[:,1:Ncs+1].to_numpy() #Coverage
+                lnt = len(Input_time_array) #length of the (default) input array
+            else:
+                Input_time_array = inp_array[:,0] #Time
+                Input_covg_array = inp_array[:,1:Ncs+1] #Note that the inputed array must include time    
+                lnt = len(Input_time_array) #length of the inputed array
+
+        elif InputType=='iCovg_iRates': #Instantaneous Coverages and Rates
+            if inp_array==[]: #If no input array is inserted, then the default input is used
+                Input_time_array = self.Input.iloc[:,0].to_numpy() #Time
+                Input_covg_array = self.Input.iloc[:,1:Ncs+1].to_numpy() #Coverage
+                Input_rates_array = self.Input.iloc[:,-Ngs:].to_numpy() #Rates
+                lnt = len(Input_time_array)
+            else:
+                Input_time_array = inp_array[:,0] #Time
+                Input_covg_array = inp_array[:,1:Ncs+1] #Note that the inputed array must include time    
+                Input_rates_array = inp_array[:,-Ngs:] #Note that the inputed array must include time    
+                lnt = len(Input_time_array) #length of the inputed array
 
         if self.n_extract<=1 and self.n_extract>0:
             n_extr = int(self.n_extract*np.shape(Input_covg_array)[0]) #Calculating number of points to be extracted based on the percentage entered (eg. 0.7 = 70%)
@@ -754,31 +783,28 @@ class Fitting:
             print(n_extr,' points in the Input dataset are being extracted for fitting\n')
         else:
             raise Exception('Please enter a value from 0 to 1 to indicate percent of input data or greater than 1 for a specific positive number to indicate the desired number of points to be extracted.')
-            
-        if inp_array==[]:
-            lnt = len(self.Input.iloc[:,0]) #length of the (default) input array
-            if self.Input_Type=='KMC_Steady':
-                inp_array = Input_covg_array #The default input array
+               
+        dist = len(Input_time_array[::round(lnt/n_extr)]) #length to be used to intilaize empty array   
 
-        else:
-            lnt = len(inp_array[:,0]) #length of the inputed array
-            
-        dist = len(inp_array[:,0][::round(lnt/n_extr)]) #length to be used to intilaize empty array
-        
-        
-        Covg_Inp = np.empty((dist,np.shape(Input_covg_array)[1])) #Extracted n values from input
+        Time_Inp = np.empty((dist,1))
+        Covg_Inp = np.empty((dist,Ncs)) #Extracted n values from input
 
-        if self.Input_Type=='KMC_Steady':  
+        if InputType=='iCovg' or InputType=='iCovg_iRates':  
+            Time_Inp = Input_time_array[::round(lnt/n_extr)]
             for i in np.arange(Ncs): #looping over Number of species 
-                if np.isnan(inp_array[:,i]).any() == True:
+                if np.isnan(Input_covg_array[:,i]).any() == True:
                     raise Exception('Check Number of Surface_species Ncs is correct; Check to see correct method has been chosen; Check to see if Input format is correct')
-                Covg_Inp[:,i]=inp_array[:,i][::round(lnt/n_extr)]
+                Covg_Inp[:,i]=Input_covg_array[:,i][::round(lnt/n_extr)]
+        
+        if InputType=='iCovg_iRates':
+            Rates_Inp = np.empty((dist,Ngs))
+            for i in np.arange(Ngs): 
+                Rates_Inp[:,i] = Input_rates_array[:,i][::round(lnt/n_extr)]
 
-            Rates_Inp = []
-            for i in np.arange(len(self.Pextract())): 
-                Rates_Inp.append(float(self.Input.iloc[0,Ncs+i]))
-
-            return Covg_Inp,Rates_Inp   
+        if InputType=='iCovg':
+            return Time_Inp,Covg_Inp
+        elif InputType=='iCovg_iRates':
+            return Time_Inp,Covg_Inp,Rates_Inp   
     #------------------------------------------------------------------------------------------------------------------------------    
     def normalize(self,Ext_inp=[]):  #Note: Input and output both include time vector
         if Ext_inp==[]:
@@ -819,30 +845,30 @@ class Fitting:
     #------------------------------------------------------------------------------------------------------------------------------    
     # Rate_functions that generates combination of constrained coverages _ to be mininimized to obtain rate parameters using a curvefit method
     #------------------------------------------------------------------------------------------------------------------------------    
-    def kinetic_output(self,x,*fit_params): #covg and steady state rates of prod
+    def kinetic_output_iCovg_iRates(self,x,*fit_params): #covg and steady state rates of prod
         fit_params_array = np.array(fit_params)
         Ncs = len(self.Stoich.iloc[0,:])-len(self.Pextract()) #No. of Surface species
-        colmn = len(self.Stoich.iloc[0,1:]) - len(self.P) - 1 #Number of columns (i.e rate coefficients = no. of surface species being investigated)
+        Ngs = len(self.MKM.Pextract()) #No. of gaseous species
         rw = len(self.k)
 
         self.MKM.k = fit_params_array       
 
-        input_covg,input_rate = self.extract()
-        input_time=input_covg[:,0]  #Used to set the time values to perform Numerical differentiation
-        inp_init_covg = input_covg[0,1:Ncs]  #Used to make sure the intial coverages match the input
+        input_time,input_covg,input_rate = self.extract()
+        inp_init_covg = input_covg[0,:]  #Used to make sure the intial coverages match the input
 
         covg_sol,covg_t= self.MKM.solve_coverage(t=[0,input_time[-1]],initial_cov=inp_init_covg,Tf_eval=input_time,full_output=False) #Uses MKM.getODEs, but the inclass solve_coverage to add custom time dependancies
-        ssratep_sol = self.MKM.get_SS_rates_production(tf=None,Tf_eval=input_time) #steady state rates of production of all species
-        gssratep_sol = list(ssratep_sol[:len(self.MKM.Pextract())]) #Extracting gaseous species steady state rates of production  
+        ratep_sol, ratep_t = self.MKM.solve_rate_production(tf=None,Tf_eval=input_time) #instantaneous rates of production of all species
+        gratep_sol = ratep_sol[:,:Ngs] #Extracting instantaneous gaseous species rates of production  #Note: gas species are the ordered first 
 
-        if self.Input_Type=='KMC_Steady':
-            kin_output = np.reshape(covg_sol[:,0:],covg_sol[:,0:].size)
-            kin_output = np.concatenate((kin_output,gssratep_sol))
-        
+        kin_output_covg = np.reshape(covg_sol,covg_sol.size)
+        kin_output_gratep = np.reshape(gratep_sol,gratep_sol.size)
+        kin_output = np.concatenate((kin_output_covg,kin_output_gratep))
+
         return kin_output
     #------------------------------------------------------------------------------------------------------------------------------    
-    def rate_func_SSKMC(self,Params,x,y): #covg and steady state rates of prod
-        Ncs = len(self.Stoich.iloc[0,:])-len(self.Pextract()) #No. of Surface species
+    def rate_func_iCovg_iRates(self,Params,x,y): #covg and steady state rates of prod
+        Ncs = len(self.Stoich.iloc[0,:])-len(self.Pextract())-1 #No. of Surface species
+        Ngs = len(self.MKM.Pextract()) #No. of gaseous species
         colmn = len(self.Stoich.iloc[0,1:]) - len(self.P) - 1 #Number of columns (i.e rate coefficients = no. of surface species being investigated)
         rw = len(self.k)
 
@@ -854,17 +880,25 @@ class Fitting:
 
         self.MKM.k = fit_params_array       
 
-        input_covg,input_rate = self.extract()
-        input_time=input_covg[:,0]  #Used to set the time values to perform Numerical differentiation
-        inp_init_covg = input_covg[0,1:Ncs]  #Used to make sure the intial coverages match the input
+        input_time,input_covg,input_rate = self.extract()
+        inp_init_covg = input_covg[0,:]  #Used to make sure the intial coverages match the input
 
         covg_sol,covg_t= self.MKM.solve_coverage(t=[0,input_time[-1]],initial_cov=inp_init_covg,Tf_eval=input_time,full_output=False) #Uses MKM.getODEs, but the inclass solve_coverage to add custom time dependancies
-        ssratep_sol = self.MKM.get_SS_rates_production(tf=None,Tf_eval=input_time) #steady state rates of production of all species
-        gssratep_sol = list(ssratep_sol[:len(self.MKM.Pextract())]) #Extracting gaseous species steady state rates of production  
+        ratep_sol,ratep_t = self.MKM.solve_rate_production(tf=None,Tf_eval=input_time) #steady state rates of production of all species
+        gratep_sol = ratep_sol[:,:Ngs] #Extracting instantaneous gaseous species rates of production  #Note: gas species are the ordered first
 
-        kin_output = np.reshape(covg_sol[:,0:],covg_sol[:,0:].size)
-        kin_output = np.concatenate((kin_output,gssratep_sol))
+        kin_output_covg = np.reshape(covg_sol,covg_sol.size)
+        kin_output_gratep = np.reshape(gratep_sol,gratep_sol.size)
+        kin_output = np.concatenate((kin_output_covg,kin_output_gratep))
         
+        enablePrint()
+        print('---from rate_func')
+        print('shape: kin_outp:',np.shape(kin_output))
+        print('shape: y:',np.shape(y))
+        print('checknan_kinp:',np.any(np.isnan(kin_output)))
+        print('checknan_y:',np.any(np.isnan(y)))
+        blockPrint()
+
         return kin_output - y 
     #------------------------------------------------------------------------------------------------------------------------------    
     def error_func_0(self,fit_params):
@@ -950,21 +984,34 @@ class Fitting:
     #------------------------------------------------------------------------------------------------------------------------------     
     def minimize_fun(self,method,max_nfev = None):
 
-        if self.Input_Type=='KMC_Steady':
-            cost_function = self.rate_func_SSKMC
-            covg_values,srate_p_values = self.extract() # Input Datan (covg array and steady state rates of production list)
+        if self.Input_Type=='iCovg_iRates':
+            cost_function = self.rate_func_iCovg_iRates
+            time_values,covg_values,ratep_values = self.extract() # Input Data
         
-        x_values = covg_values[:,0] # Input Time variables (Independent Variable) (eg. KMC Time)
+            x_values = time_values # Input Time variables (Independent Variable) (eg. KMC Time)
 
-        y_values = np.reshape(covg_values[:,1:],covg_values[:,1:].size) # Input Dependent variable(s) (eg. KMC coverages)
+            y_values_covg = np.reshape(covg_values,covg_values.size) # Input Dependent variable(s) (eg. KMC coverages)
 
-        y_values = np.concatenate((y_values,srate_p_values)) #Including the steady state rates of productions to be compared with/error minimized
-        
+            y_values_gratep = np.reshape(ratep_values,ratep_values.size) # Input Dependent variable(s) (eg. KMC rates_p)
+
+            y_values = np.concatenate((y_values_covg,y_values_gratep)) #Including the instantaneous rates of productions to be compared with/error minimized
+            
         # parameters = self.PARAM
         parameters = Parameters()
         for i in np.arange(len(self.k)):
-            parameters.add('k'+str(i+1),value=self.k[i],min=0)
-        fitted_params = minimize(self.rate_func_SSKMC, parameters, args=(x_values,y_values), method=method, max_nfev = max_nfev)
+            parameters.add('k'+str(i+1),value=self.k[i],min=1e-20)
+        
+        enablePrint()
+        print('---from minimize_fun')
+        print('shape: xvl:',np.shape(x_values))
+        print('shape: yvl:',np.shape(y_values))
+        print('checknan_x_values:',np.any(np.isnan(x_values)))
+        print('checknan_y_values:',np.any(np.isnan(y_values)))
+        print('checknan_y_valuescovg:',np.any(np.isnan(y_values_covg)))
+        print('checknan_y_valuesrates:',np.any(np.isnan(y_values_gratep)))
+        blockPrint()
+
+        fitted_params = minimize(self.rate_func_iCovg_iRates, parameters, args=(x_values,y_values), method=method, max_nfev = max_nfev)
 
         vec_fitted_param = np.empty(len(self.k))
         for i in np.arange(len(self.k)):
@@ -1348,8 +1395,8 @@ class Fitting:
         
         colmn = len(self.Stoich.iloc[0,1:]) - len(self.P) - 1 #Number of columns (i.e no. of surface species being investigated)
         index = list(string.ascii_lowercase)[:colmn]
-        if self.Input_Type=='KMC_Steady':
-            og_covg,og_srate_p = self.extract()
+        if self.Input_Type=='iCovg_iRates':
+            og_time,og_covg,og_srate_p = self.extract()
         # blockPrint() #Preventing reprinting in jupyter
         if option=='min':
         
@@ -1360,11 +1407,12 @@ class Fitting:
 
             params, params_covariance = self.minimize_fun(method=method_min,max_nfev = int(maxfev))
     
-            x_values = og_covg[:,0] #OG time values
+            x_values = og_time #OG time values
             
-            if self.Input_Type=='KMC_Steady':
+            if self.Input_Type=='iCovg_iRates':
                 kin_output = self.kinetic_output(x_values, *params) #kinetic output from running predicted rate parameters; This kinetic output differs based on what kind of input was given
-                covg_fit=kin_output[:-len(self.Pextract())].reshape(np.shape(og_covg[:,1:]))
+                kin_output_covg = kin_output[:np.size(og_covg)] #extracting only coverages and not rates etc
+                covg_fit= kin_output_covg.reshape(np.shape(og_covg)) #Reshaping to allow for ease in plotting
             # converg = np.sqrt(np.diag(params_covariance))
             enablePrint() #Re-enable printing
 
@@ -1378,10 +1426,10 @@ class Fitting:
 
             params, params_covariance = self.minimize_custom_fun(method=method_cmin,max_nfev = int(maxfev))
     
-            x_values = og_covg[:,0] #OG time values
+            x_values = og_time #OG time values
             
             yfit = self.covg_func(x_values, *params)
-            covg_fit=yfit.reshape(np.shape(og_covg[:,1:]))
+            covg_fit=yfit.reshape(np.shape(og_covg))
             #onverg = np.sqrt(np.diag(params_covariance))
             enablePrint() #Re-enable printing
 
@@ -1395,7 +1443,7 @@ class Fitting:
 
             params = self.minimize_fit(method=method_fit, weights_ = weights)
     
-            x_values = og_covg[:,0] #OG time values
+            x_values = og_time #OG time values
             
             yfit = self.covg_func(x_values, *params)
             covg_fit=yfit.reshape(np.shape(og_covg[:,1:]))
@@ -1408,18 +1456,18 @@ class Fitting:
             print('Performing fitting using scikit machine learning algorithms:')
             print("-"*50)
             blockPrint() #Disable printing
-            covg_inp = og_covg[:,1:] #Input coverage
+            covg_inp = og_covg#Input coverage
             n=int(n)
             result=self.ML_model_predict(covg_inp,n,filename,mdl)
             params=result
             
-            x_values = og_covg[:,0] #OG time values
+            x_values = og_time #OG time values
             yfit = self.covg_func(x_values, *params)
-            covg_fit=yfit.reshape(np.shape(og_covg[:,1:]))
+            covg_fit=yfit.reshape(np.shape(og_covg))
             enablePrint() #Re-enable printing
     
-        time = og_covg[:,0]      #Normalized OG time values 
-        covg_og = og_covg[:,1:]  #Normalized OG coverages
+        time = og_time   #Normalized OG time values 
+        covg_og = og_covg #Normalized OG coverages
         n = len(self.k)     #Normalized MKM fitted coverages
         
         blockPrint()
