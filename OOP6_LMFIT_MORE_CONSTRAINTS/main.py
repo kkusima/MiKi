@@ -788,6 +788,7 @@ class Fitting:
 
         Time_Inp = np.empty((dist,1))
         Covg_Inp = np.empty((dist,Ncs)) #Extracted n values from input
+        Rates_Inp = np.empty((dist,Ngs))
 
         if InputType=='iCovg' or InputType=='iCovg_iRates':  
             Time_Inp = Input_time_array[::round(lnt/n_extr)]
@@ -797,7 +798,6 @@ class Fitting:
                 Covg_Inp[:,i]=Input_covg_array[:,i][::round(lnt/n_extr)]
         
         if InputType=='iCovg_iRates':
-            Rates_Inp = np.empty((dist,Ngs))
             for i in np.arange(Ngs): 
                 Rates_Inp[:,i] = Input_rates_array[:,i][::round(lnt/n_extr)]
 
@@ -890,14 +890,6 @@ class Fitting:
         kin_output_covg = np.reshape(covg_sol,covg_sol.size)
         kin_output_gratep = np.reshape(gratep_sol,gratep_sol.size)
         kin_output = np.concatenate((kin_output_covg,kin_output_gratep))
-        
-        enablePrint()
-        print('---from rate_func')
-        print('shape: kin_outp:',np.shape(kin_output))
-        print('shape: y:',np.shape(y))
-        print('checknan_kinp:',np.any(np.isnan(kin_output)))
-        print('checknan_y:',np.any(np.isnan(y)))
-        blockPrint()
 
         return kin_output - y 
     #------------------------------------------------------------------------------------------------------------------------------    
@@ -999,17 +991,7 @@ class Fitting:
         # parameters = self.PARAM
         parameters = Parameters()
         for i in np.arange(len(self.k)):
-            parameters.add('k'+str(i+1),value=self.k[i],min=1e-20)
-        
-        enablePrint()
-        print('---from minimize_fun')
-        print('shape: xvl:',np.shape(x_values))
-        print('shape: yvl:',np.shape(y_values))
-        print('checknan_x_values:',np.any(np.isnan(x_values)))
-        print('checknan_y_values:',np.any(np.isnan(y_values)))
-        print('checknan_y_valuescovg:',np.any(np.isnan(y_values_covg)))
-        print('checknan_y_valuesrates:',np.any(np.isnan(y_values_gratep)))
-        blockPrint()
+            parameters.add('k'+str(i+1),value=self.k[i],min=0)
 
         fitted_params = minimize(self.rate_func_iCovg_iRates, parameters, args=(x_values,y_values), method=method, max_nfev = max_nfev)
 
@@ -1410,7 +1392,7 @@ class Fitting:
             x_values = og_time #OG time values
             
             if self.Input_Type=='iCovg_iRates':
-                kin_output = self.kinetic_output(x_values, *params) #kinetic output from running predicted rate parameters; This kinetic output differs based on what kind of input was given
+                kin_output = self.kinetic_output_iCovg_iRates(x_values, *params) #kinetic output from running predicted rate parameters; This kinetic output differs based on what kind of input was given
                 kin_output_covg = kin_output[:np.size(og_covg)] #extracting only coverages and not rates etc
                 covg_fit= kin_output_covg.reshape(np.shape(og_covg)) #Reshaping to allow for ease in plotting
             # converg = np.sqrt(np.diag(params_covariance))
