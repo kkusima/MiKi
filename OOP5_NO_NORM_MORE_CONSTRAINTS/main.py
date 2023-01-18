@@ -802,35 +802,35 @@ class Fitting:
         Ncs = len(self.Stoich.iloc[0,:])-Ngs-1 #No. of Surface species
         if Source=='Model':
             if Param=='Pressure':
-                print('Input Pressures [Pa]:')
+                print('\n Order for Input Pressures [Pa]:')
                 Pr_header = np.array(self.Stoich.columns[1:Ngs+1])
                 x = []
                 for i in np.arange(len(Pr_header)): x.append(i)
                 list = [x]
                 print(pd.DataFrame(list,columns=Pr_header, index=['Array order']))
             elif Param=='Coverage':
-                print('Input Coverage (Transient and Steady State) [ML]:')
+                print('\n Order for Input Coverages (Transient and Steady State) [ML]:')
                 Covg_header = np.array(self.Stoich.columns[Ngs+1:])
                 x = []
                 for i in np.arange(len(Covg_header)): x.append(i)
                 list = [x]
                 print(pd.DataFrame(list,columns=Covg_header, index=['Array order']))
             elif Param=='Rates_Production':
-                print('Input Rates of Production (Transient and Steady State) [TOF]:')
+                print('\n Order for Input Rates of Production (Transient and Steady State) [TOF]:')
                 Rp_header = np.array(self.Stoich.columns[1:])
                 x = []
                 for i in np.arange(len(Rp_header)): x.append(i)
                 list = [x]
                 print(pd.DataFrame(list,columns=Rp_header, index=['Array order']))
             elif Param=='Rates_Reaction':
-                print('Input Rates of Reactions (Transient and Steady State) [TOF]:')
+                print('\n Order for Input Rates of Reactions (Transient and Steady State) [TOF]:')
                 Rr_header = np.array(self.Stoich.iloc[:,0])
                 x = []
                 for i in np.arange(len(Rr_header)): x.append(i)
                 list = [x]
                 print(pd.DataFrame(list,columns=Rr_header, index=['Array order']))
             elif Param=='Rate_Constants':
-                print('Input Rate Constants [1/s]:')
+                print('\n Order for Input Rate Constants [1/s]:')
                 params_header = []
                 for i in np.arange(len(self.k)):
                     params_header.append('k'+str(i+1))
