@@ -6,10 +6,21 @@ import matplotlib.pyplot as plt
 import sys, os
 import matplotlib.pyplot as plt
 
-plt.figure()
-x = [1, 1]
-plt.plot(x)
-plt.show()
+# import pandas
+# data = [[1, 'Liquid', 24, 12],
+# [2, 'Virtus.pro', 19, 14],
+# [3, 'PSG.LGD', 15, 19],
+# [4,'Team Secret', 10, 20]]
+# data = np.array(data)
+# print(type(data))
+# headers=["Pos", "Team", "Win", "Lose"]
+# index = ["Po1s", "Team1", "Win1", "Lo1se"]
+# print(pandas.DataFrame(data, columns= headers))
+# print('                                         ')
+# print('-----------------------------------------')
+# print('                                         ')
+# print(pandas.DataFrame(data, headers))
+
 # import tensorflow as tf
 # import torch as tf
 # from torch import nn
@@ -25,9 +36,7 @@ fit = Fitting('KMC_Steady_Kinetic_Input.csv','Atomic.csv','Stoich.csv','Param.cs
 fit.set_limits_of_integration(fit.Input.iloc[0,0],fit.Input.iloc[-1,0])
 fit.n_extract = 0.5
 
-rate_k = fit.k
-act= fit.rate_func_SSKMC(5,*rate_k)
-print(act)
+fit.paramorderinfo(Param='Coverage')
 # vec_a = fit.rate_func_0(2,*rate_k)
 # print(len(vec_a))
 # print(np.shape(vec_a[0]))

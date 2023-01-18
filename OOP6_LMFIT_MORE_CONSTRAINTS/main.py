@@ -806,6 +806,40 @@ class Fitting:
         elif InputType=='iCovg_iRates':
             return Time_Inp,Covg_Inp,Rates_Inp   
     #------------------------------------------------------------------------------------------------------------------------------    
+    def paramorderinfo(self,Source='Model',Param='Pressure'):  
+        enablePrint()
+        Ngs = len(self.Pextract())
+        Ncs = len(self.Stoich.iloc[0,:])-Ngs-1 #No. of Surface species
+        if Source=='Model':
+            if Param=='Pressure':
+                print('Input Pressures [Pa]:')
+                Pr_header = np.array(self.Stoich.columns[1:Ngs+1])
+                x = []
+                for i in np.arange(len(Pr_header)): x.append(i)
+                list = [x]
+                print(pd.DataFrame(list,columns=Pr_header, index=['Array order']))
+            elif Param=='Coverage':
+                print('Input Coverage (Transient and Steady State) [ML]:')
+                Covg_header = np.array(self.Stoich.columns[Ngs+1:])
+                x = []
+                for i in np.arange(len(Covg_header)): x.append(i)
+                list = [x]
+                print(pd.DataFrame(list,columns=Covg_header, index=['Array order']))
+            elif Param=='Rates_Production':
+                Rp_header = np.array(self.Stoich.columns[1:])
+                x = []
+                for i in np.arange(len(Rp_header)): x.append(i)
+                list = [x]
+                print(pd.DataFrame(list,columns=Rp_header, index=['Array order']))
+            elif Param=='Rates_Reaction':
+                Rr_header = np.array(self.Stoich.iloc[:,0])
+                x = []
+                for i in np.arange(len(Rr_header)): x.append(i)
+                list = [x]
+                print(pd.DataFrame(list,columns=Rr_header, index=['Array order']))
+        blockPrint()
+        return 
+    #------------------------------------------------------------------------------------------------------------------------------    
     def normalize(self,Ext_inp=[]):  #Note: Input and output both include time vector
         if Ext_inp==[]:
             inp=self.extract(inp_array=[])
