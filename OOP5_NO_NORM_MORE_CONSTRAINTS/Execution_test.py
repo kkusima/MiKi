@@ -36,7 +36,7 @@ fit = Fitting('KMC_Steady_Kinetic_Input.csv','Atomic.csv','Stoich.csv','Param.cs
 fit.set_limits_of_integration(fit.Input.iloc[0,0],fit.Input.iloc[-1,0])
 fit.n_extract = 0.5
 
-fit.paramorderinfo(Param='Rates_Reaction')
+fit.paramorderinfo(Param='Coverage')
 # vec_a = fit.rate_func_0(2,*rate_k)
 # print(len(vec_a))
 # print(np.shape(vec_a[0]))
