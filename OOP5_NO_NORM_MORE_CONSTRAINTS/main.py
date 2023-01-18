@@ -816,17 +816,28 @@ class Fitting:
                 list = [x]
                 print(pd.DataFrame(list,columns=Covg_header, index=['Array order']))
             elif Param=='Rates_Production':
+                print('Input Rates of Production (Transient and Steady State) [TOF]:')
                 Rp_header = np.array(self.Stoich.columns[1:])
                 x = []
                 for i in np.arange(len(Rp_header)): x.append(i)
                 list = [x]
                 print(pd.DataFrame(list,columns=Rp_header, index=['Array order']))
             elif Param=='Rates_Reaction':
+                print('Input Rates of Reactions (Transient and Steady State) [TOF]:')
                 Rr_header = np.array(self.Stoich.iloc[:,0])
                 x = []
                 for i in np.arange(len(Rr_header)): x.append(i)
                 list = [x]
                 print(pd.DataFrame(list,columns=Rr_header, index=['Array order']))
+            elif Param=='Rate_Constants':
+                print('Input Rate Constants [1/s]:')
+                params_header = []
+                for i in np.arange(len(self.k)):
+                    params_header.append('k'+str(i+1))
+                x=[]
+                for i in np.arange(len(params_header)): x.append(i)
+                list = [x]
+                print(pd.DataFrame(list,columns=params_header, index=['Array order']))
         blockPrint()
         return 
     #------------------------------------------------------------------------------------------------------------------------------    
