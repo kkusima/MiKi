@@ -374,15 +374,20 @@ class MKModel:
         return SS
     
     #------------------------------------------------------------------------------------------------------------------------------
-    def get_X_RC_SS(self,p_inc=0.1,k_o_inp=[],rxn = -1):
+    def get_X_RC_SS(self,p_inc=0.1,k_o_inp=[],rxn=-1):
         #p_inc is the percent increase of rate const. #k_o_inp, is the inputed rate constants to allow for their initial values to be user defined, #rxn is the reaction producing the products being investigated : -1 indicates the last elementary step
         if k_o_inp!=[]:
             k_o = k_o_inp
         else:
-            k_o = self.kextract() #From Param file
+            k_o = np.array(self.kextract()) #From Param file
             
         Xrc = [] #Initializing the empty array of degrees of rate control
-        rin = self.get_SS_rates_reaction()
+        self.k = np.array(k_o)
+        rin = np.array(self.get_SS_rates_reaction())
+        # enablePrint()
+        # print('--initial SSrates')
+        # print(rin)
+        # print('\n')
         
         if rxn>len(rin) or rxn<(-len(rin)):
             raise Exception('An invalid rxn value has been entered')
@@ -391,26 +396,28 @@ class MKModel:
         
         for i in np.arange(len(rin)):
             n = 2*i
-            # knew = k_o #Re-initializing knew so it can only be changed for the specific elementary steps
-            enablePrint()
-            print(i)
-            print('before:')
-            print(k_o)
-            kfwd = k_o[n]*(1+p_inc)
-            krvs = k_o[n+1]*(1+p_inc)
-            indices = [n,n+1]
-            repl = [kfwd,krvs]
-            knew = k_o[:] 
+            # print(i)
+            # print('before:')
+            # print(k_o)
+            kfwd = k_o[n]*(1+p_inc) #Multiplying the relevant forward rate const. by the change
+            krvs = k_o[n+1]*(1+p_inc) #Multiplying the relevant reverse rate const. by the change
+            indices = [n,n+1] #The relevant indices in the rate const. array corresponding to this change
+            repl = [kfwd,krvs] #The changed rate const.s corresponding to the indices
+            knew = np.array(k_o) #Re-initializing knew so it can only be changed for the specific elementary steps (i.e so that other rate constants remain unchanged)
             for index, replacement in zip(indices, repl):
                 knew[index] = replacement
-            print('after')
-            print(knew)
-            self.k = knew
-            knew = k_o
-            rnew =self.get_SS_rates_reaction()
+            # print('after')
+            # print(knew)
+            self.k = np.array(knew)
+            rnew = np.array(self.get_SS_rates_reaction())
+            # print('\n Printing rnew')
+            # print(rnew)
             Xrc.append((rnew[i]-ro)/(ro*p_inc))
-            blockPrint()
-                
+        
+        self.k = np.array(k_o)
+        # print(self.k)    
+        # blockPrint()
+                        
         return Xrc
     
     #------------------------------------------------------------------------------------------------------------------------------
