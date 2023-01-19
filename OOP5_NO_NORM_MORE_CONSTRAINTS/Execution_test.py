@@ -28,15 +28,18 @@ import matplotlib.pyplot as plt
 # from torchvision import datasets
 # from torchvision.transforms import ToTensor
 
+MKM=MKModel('Atomic.csv','Stoich.csv','Param.csv') #Defining the Model
 
-
+print(MKM.get_X_RC_SS())
+# print(np.sum(MKM.get_X_RC_SS()))
+# print(MKM.get_SS_rates_reaction())
 # t,covg,fits = fit.fitting_rate_param(option='ML',plot=True)
 #####FITTING#------------------------------------------------------------------------------------------------------------------------------
 fit = Fitting('KMC_Steady_Kinetic_Input.csv','Atomic.csv','Stoich.csv','Param.csv') #covgdep = Allowing for coverage dependance to be considered in the fit
-fit.set_limits_of_integration(fit.Input.iloc[0,0],fit.Input.iloc[-1,0])
+# fit.set_limits_of_integration(fit.Input.iloc[0,0],fit.Input.iloc[-1,0])
 fit.n_extract = 0.5
 
-fit.paramorderinfo(Param='Coverage')
+
 # vec_a = fit.rate_func_0(2,*rate_k)
 # print(len(vec_a))
 # print(np.shape(vec_a[0]))
