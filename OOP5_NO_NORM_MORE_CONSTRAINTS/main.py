@@ -705,6 +705,7 @@ class Fitting:
         self.status='Waiting' #Used to observe the status of the ODE Convergence
         self.label='None'   #Used to pass in a label so as to know what kind of figure to plot
         #Output: self.fitted_k  #Can be used to extracted an array of final fitted rate parameters
+
         if self.Input_Type not in ['iCovg','iCovg_iRates']:
             raise Exception('Input type specified is not recognised.\n Please make sure your input type is among that which is acceptable')
     #------------------------------------------------------------------------------------------------------------------------------   
@@ -803,40 +804,56 @@ class Fitting:
         elif InputType=='iCovg_iRates':
             return Time_Inp,Covg_Inp,Rates_Inp   
     #------------------------------------------------------------------------------------------------------------------------------    
-    def paramorderinfo(self,Source='Model',Param='Pressure'):  
-        enablePrint()
+    def paramorderinfo(self,Source='Model',Param='Pressure'): 
         Ngs = len(self.Pextract())
         Ncs = len(self.Stoich.iloc[0,:])-Ngs-1 #No. of Surface species
         if Source=='Model':
             if Param=='Pressure':
+                enablePrint()
                 print('\n Order for Input Pressures [Pa]:')
                 Pr_header = np.array(self.Stoich.columns[1:Ngs+1])
                 x = []
                 for i in np.arange(len(Pr_header)): x.append(i)
                 list = [x]
                 print(pd.DataFrame(list,columns=Pr_header, index=['Array order']))
+                blockPrint()
+                return
+                 
             elif Param=='Coverage':
+                enablePrint()
                 print('\n Order for Input Coverages (Transient and Steady State) [ML]:')
                 Covg_header = np.array(self.Stoich.columns[Ngs+1:])
                 x = []
                 for i in np.arange(len(Covg_header)): x.append(i)
                 list = [x]
                 print(pd.DataFrame(list,columns=Covg_header, index=['Array order']))
+                blockPrint()
+                return 
+
             elif Param=='Rates_Production':
+                enablePrint()
                 print('\n Order for Input Rates of Production (Transient and Steady State) [TOF]:')
                 Rp_header = np.array(self.Stoich.columns[1:])
                 x = []
                 for i in np.arange(len(Rp_header)): x.append(i)
                 list = [x]
                 print(pd.DataFrame(list,columns=Rp_header, index=['Array order']))
+                blockPrint()
+                return 
+
             elif Param=='Rates_Reaction':
+                enablePrint()
                 print('\n Order for Input Rates of Reactions (Transient and Steady State) [TOF]:')
                 Rr_header = np.array(self.Stoich.iloc[:,0])
                 x = []
                 for i in np.arange(len(Rr_header)): x.append(i)
                 list = [x]
                 print(pd.DataFrame(list,columns=Rr_header, index=['Array order']))
+                blockPrint()
+                return
+
             elif Param=='Rate_Constants':
+                enablePrint()
                 print('\n Order for Input Rate Constants [1/s]:')
                 params_header = []
                 for i in np.arange(len(self.k)):
@@ -845,8 +862,10 @@ class Fitting:
                 for i in np.arange(len(params_header)): x.append(i)
                 list = [x]
                 print(pd.DataFrame(list,columns=params_header, index=['Array order']))
-        blockPrint()
-        return 
+                blockPrint()
+                return 
+
+        enablePrint()
     #------------------------------------------------------------------------------------------------------------------------------    
     def normalize(self,Ext_inp=[]):  #Note: Input and output both include time vector
         if Ext_inp==[]:
