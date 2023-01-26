@@ -414,7 +414,7 @@ class MKModel:
             rnew = np.array(self.get_SS_rates_reaction())
             # print('\n Printing rnew')
             # print(rnew)
-            Xrc.append((rnew[i]-ro)/(ro*p_inc))
+            Xrc.append((rnew[rxn]-ro)/(ro*p_inc))
         
         self.k = np.array(k_o)
         # print(self.k)    
