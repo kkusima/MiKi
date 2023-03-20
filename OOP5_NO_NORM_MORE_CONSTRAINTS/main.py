@@ -12,6 +12,7 @@ from scipy.special import logsumexp
 from numdifftools import Jacobian, Hessian
 from autograd import jacobian, hessian
 import copy
+from numba import njit 
 
 # Disable Printing
 def blockPrint():
@@ -905,6 +906,22 @@ class Fitting:
     #------------------------------------------------------------------------------------------------------------------------------    
     # Rate_functions that generates combination of constrained coverages _ to be mininimized to obtain rate parameters using a curvefit method
     #------------------------------------------------------------------------------------------------------------------------------    
+    def covg_func(self,x,*fit_params):
+        fit_params_array = np.array(fit_params)
+        colmn = len(self.Stoich.iloc[0,1:]) - len(self.P) - 1 #Number of columns (i.e rate coefficients = no. of surface species being investigated)
+        rw = len(self.k)
+
+        self.MKM.k = fit_params_array       
+
+        input_time,input_covg,input_rate = self.extract() #Input time used for setting limits of integration; Input covg used to set initial condition for numerical differentiaiton
+        inp_init_covg = input_covg[0,:]  #Used to make sure the intial coverages match the input
+
+        sol,solt= self.MKM.solve_coverage(t=[0,input_time[-1]],initial_cov=inp_init_covg,Tf_eval=input_time,full_output=False) #Uses MKM.getODEs, but the inclass solve_coverage to add custom time dependancies
+        soldat = np.insert(sol,0,solt,axis=1)   #Merging time and parameters       
+        #Norm_sol = self.normalize(Ext_inp=soldat) #(BECAUSE WE ARE NOT NORMALIZING)
+        
+        return np.reshape(soldat[:,1:],soldat[:,1:].size)
+    #------------------------------------------------------------------------------------------------------------------------------    
     def rate_func_iCovg_iRates(self,x,*fit_params): #cost function for non-dynamic kmc #covg and instantaneous gasseous rates of prod
         fit_params_array = np.array(fit_params)
         Ncs = len(self.Stoich.iloc[0,:])-len(self.Pextract())-1 #No. of Surface species
@@ -928,14 +945,16 @@ class Fitting:
     def error_func_0(self,fit_params):
         fit_params_array = np.array(fit_params)
         colmn = len(self.Stoich.iloc[0,1:]) - len(self.P) - 1 #Number of columns/species (i.e rate coefficients = no. of surface species being investigated) #Exckuding empty sites
-        og = self.extract() #Original input #NO NORMALIZING
+        
         klen = len(self.k)
 
         self.MKM.k = fit_params_array   
-        
-        input_time=self.extract()[:,0]
-        inp_init_covg = self.extract()[0,1:-1]
-        sol,solt= self.solve_coverage(t=[0,input_time[-1]],initial_cov=inp_init_covg,Tf_eval=input_time,full_output=False) #Uses MKM.getODEs, but the inclass solve_coverage to add custom time dependancies
+        input_time,input_covg,input_rate = self.extract()
+        og =  np.insert(input_covg,0,input_time,axis=1)
+
+
+        inp_init_covg = input_covg[0,:] 
+        sol,solt= self.MKM.solve_coverage(t=[0,input_time[-1]],initial_cov=inp_init_covg,Tf_eval=input_time,full_output=False) #Uses MKM.getODEs, but the inclass solve_coverage to add custom time dependancies
         soldat = np.insert(sol,0,solt,axis=1)   #Merging time and parameters
         #Norm_sol = self.normalize(Ext_inp=soldat)
         
@@ -968,13 +987,15 @@ class Fitting:
         fit_params_array = np.array(fit_params)
         colmn = len(self.Stoich.iloc[0,1:]) - len(self.P) - 1 #Number of columns (i.e rate coefficients = no. of surface species being investigated)
         rw = len(self.k)
-        og = self.extract() #Original input
+        input_time,input_covg,input_rate = self.extract()
+        og =  np.insert(input_covg,0,input_time,axis=1)
         
         self.MKM.k = fit_params_array
-            
-        input_time=self.extract()[:,0]
-        inp_init_covg = self.extract()[0,1:-1]
-        sol,solt= self.solve_coverage(t=[0,input_time[-1]],initial_cov=inp_init_covg,Tf_eval=input_time) #Uses MKM.getODEs, but the inclass solve_coverage to add custom time dependancies
+        time_values,covg_values,ratep_values = self.extract()
+
+        input_time=time_values
+        inp_init_covg = covg_values
+        sol,solt= self.MKM.solve_coverage(t=[0,input_time[-1]],initial_cov=inp_init_covg,Tf_eval=input_time) #Uses MKM.getODEs, but the inclass solve_coverage to add custom time dependancies
         soldat = np.insert(sol,0,solt,axis=1)   #Merging time and parameters
         #Norm_sol = self.normalize(Ext_inp=soldat)
         
@@ -1029,10 +1050,10 @@ class Fitting:
         return params, params_covariance
     #------------------------------------------------------------------------------------------------------------------------------ 
     def minimizer_fit_func(self,method,gtol,ftol,maxfun,maxiter,tol,xatol,fatol,adaptive):
-        values = self.extract()
+        time_values,covg_values,ratep_values = self.extract()
 
-        x_values = values[:,0]
-        y_values = np.reshape(values[:,1:],values[:,1:].size)
+        x_values = time_values
+        y_values = np.reshape(covg_values,covg_values.size)
         
         #Setting Bounds
         #max K Guess parameters
@@ -1088,6 +1109,7 @@ class Fitting:
         from jax import jacfwd
         
         #USING NUMDIFFTOOLS#---------#---------#---------#
+        # @njit(fastmath=True,parallel=True) #wont work because of use of self may need to use jitclass see documentations
         def jacf(x):
             jac = Jacobian((lambda x: self.error_func_0(x)),method='forward',order=3)(x).ravel()
             # enablePrint()
@@ -1134,7 +1156,8 @@ class Fitting:
     def ML_data_gen_0(self,n): ##degree of change is uniform across rates
         a = len(self.Stoich.iloc[0,1:]) - len(self.P) - 1 #Number of columns (i.e rate coefficients = no. of surface species being investigated)
         b = len(self.k)
-        og = self.extract() #Original input
+        input_time,input_covg,input_rate = self.extract()
+        og =  np.insert(input_covg,0,input_time,axis=1) #Original input
         
         # if self.CovgDep==True:
         #     rate_cvals = np.concatenate((self.k,self.Coeff.flatten(order='F')))
@@ -1155,8 +1178,8 @@ class Fitting:
 
         # Getting coverage matrix (rank 3 tensor)
         Covg = np.zeros((n,np.shape(og[:,1:])[0],np.shape(og[:,1:])[1]))
-        input_time=og[:,0]
-        inp_init_covg = og[0,1:-1]
+
+        inp_init_covg = input_covg[0,:] 
         for i in np.arange(n):
             
             # if self.CovgDep==False:
@@ -1165,7 +1188,7 @@ class Fitting:
             #     self.MKM.k = Rate_Coeff[i,:b]
             #     self.MKM.Coeff = np.reshape(Rate_Coeff[i,b:],(b,a))
                 
-            sol,solt= self.solve_coverage(t=[0,input_time[-1]],initial_cov=inp_init_covg,Tf_eval=input_time)
+            sol,solt= self.MKM.solve_coverage(t=[0,input_time[-1]],initial_cov=inp_init_covg,Tf_eval=input_time)
             Covg[i,:,:] = sol
             # print(Rate_Coeff)
             # print(Covg)
@@ -1174,7 +1197,8 @@ class Fitting:
     def ML_data_gen_1(self,n): #Magnitude remains the same across the entire rate constant matrix
         a = len(self.Stoich.iloc[0,1:]) - len(self.P) - 1 #Number of columns (i.e rate coefficients = no. of surface species being investigated)
         klen = len(self.k)
-        og = self.extract() #Original input
+        input_time,input_covg,input_rate = self.extract()
+        og =  np.insert(input_covg,0,input_time,axis=1) #Original input
 
         # if self.CovgDep==True:
         #     rate_cvals = np.concatenate((self.k,self.Coeff.flatten(order='F')))
@@ -1206,8 +1230,8 @@ class Fitting:
         # Getting coverage matrix (rank 3 tensor)
         Covg = np.zeros((n,og.shape[0],np.shape(og[:,1:])[1]))
 
-        input_time=og[:,0]
-        inp_init_covg = og[0,1:-1]
+        
+        inp_init_covg = input_covg[0,:] 
         for i in np.arange(n):
             
             # if self.CovgDep==False:
@@ -1216,7 +1240,7 @@ class Fitting:
             #     self.MKM.k = Rate_Coeff[i,:klen]
             #     self.MKM.Coeff = np.reshape(Rate_Coeff[i,klen:],(klen,a))
                 
-            sol,solt= self.solve_coverage(t=[0,input_time[-1]],initial_cov=inp_init_covg,Tf_eval=input_time)
+            sol,solt= self.MKM.solve_coverage(t=[0,input_time[-1]],initial_cov=inp_init_covg,Tf_eval=input_time)
             Covg[i,:,:] = sol
         
         return Rate_Coeff,Covg
@@ -1274,8 +1298,11 @@ class Fitting:
         a = len(self.Stoich.iloc[0,1:]) - len(self.P)  #Number of surface species being investigated
         if filename!=None and filename[-5:]!='.xlsx':  #Making sure that the Name entered has .csv attachment
             raise Exception("Name entered must end with .xlsx ; Example ML_dataset_1.xlsx")
-            
-        if os.path.exists(filename) != True or n!=len(pd.read_excel('./'+filename, sheet_name='Rate_Coeffs')) or len(self.extract()) != len(pd.read_excel('./'+filename, sheet_name='Coverages')): #if the ML_data excel file doesnt exists or it doesn't have same no. of rows as the number specified, it replaces the dataset with the desired one
+        
+        input_time,input_covg,input_rate = self.extract()
+        og =  np.insert(input_covg,0,input_time,axis=1) #Original input
+
+        if os.path.exists(filename) != True or n!=len(pd.read_excel('./'+filename, sheet_name='Rate_Coeffs')) or len(og) != len(pd.read_excel('./'+filename, sheet_name='Coverages')): #if the ML_data excel file doesnt exists or it doesn't have same no. of rows as the number specified, it replaces the dataset with the desired one
             #Making the ML_data excel file and saving it into the directory
             Rate_Coeff,Covg = ML_Dataset
             Rate_Coeff_df = pd.DataFrame(Rate_Coeff)
@@ -1310,19 +1337,17 @@ class Fitting:
         if mdl == 'MLPRegressor':
             enablePrint() #Enabling printing
             print('-Using Algorithm: MLPRegressor | (FeedForward) Neural Network:\n')
-            No_H_nodes_per_layer = 10
+            No_H_nodes_per_layer = 128
             print('Number of Hidden layer nodes per layer : ',No_H_nodes_per_layer)
-            No_H_layers = 3
+            No_H_layers = 4
             print('Number of Hidden layers: ',No_H_layers)
             blockPrint() #Disabling printing
             
             hidden_layers = No_H_nodes_per_layer*np.ones(No_H_layers) 
             hidden_layer_sizes = tuple(tuple(int(item) for item in hidden_layers))
             regr = MLPRegressor(hidden_layer_sizes=hidden_layer_sizes,
-                                activation='tanh', 
-                                solver='adam',random_state=42, 
-                                max_iter=5000,alpha=5e-6,
-                                learning_rate='adaptive',tol=5e-7,shuffle=True)
+                                activation='relu', 
+                                solver='adam')
             
 
         elif mdl == 'KNeighborsRegressor':
@@ -1330,27 +1355,21 @@ class Fitting:
             print('-Using Algorithm: K Nearest Neighbor Regressor:\n')
             blockPrint() #Disabling printing
             
-            regr= KNeighborsRegressor(n_neighbors=5,weights='uniform',
-                                      algorithm='auto', leaf_size=40, 
-                                      p=2, metric='cosine')
+            regr= KNeighborsRegressor(n_neighbors=8,weights='distance',p=2)
             
         elif mdl == 'DecisionTreeRegressor':
             enablePrint() #Enabling printing
             print('-Using Algorithm: Decision Tree Regressor:\n')
             blockPrint() #Disabling printing
             
-            regr = DecisionTreeRegressor(criterion='mse',splitter='best',
-                                         min_samples_leaf = 1,max_features='auto',
-                                         min_samples_split=10,random_state=42)
+            regr = DecisionTreeRegressor(criterion='poisson',splitter='best')
         
         elif mdl == 'RandomForestRegressor':
             enablePrint() #Enabling printing
             print('-Using Algorithm: Random Forest Regressor:\n')
             blockPrint() #Disabling printing
             
-            regr = RandomForestRegressor(n_estimators=300,min_samples_leaf = 1,
-                                         max_features='auto',min_samples_split=10,
-                                         random_state=42,criterion='poisson')  
+            regr = RandomForestRegressor(n_estimators=10000, criterion='poisson')  
          
         # Defining the model
         model = regr
@@ -1454,14 +1473,14 @@ class Fitting:
             print('Performing fitting using scikit machine learning algorithms:')
             print("-"*50)
             blockPrint() #Disable printing
-            covg_inp = og_covg[:,1:] #Input coverage
+            covg_inp = og_covg#[:,1:] #Input coverage
             n=int(n)
             result=self.ML_model_predict(covg_inp,n,filename,mdl)
             params=result
             
             x_values = og_time #OG time values
             yfit = self.covg_func(x_values, *params)
-            covg_fit=yfit.reshape(np.shape(og_covg[:,1:]))
+            covg_fit=yfit.reshape(np.shape(og_covg))
             enablePrint() #Re-enable printing
     
         time = og_time    # OG time values 
