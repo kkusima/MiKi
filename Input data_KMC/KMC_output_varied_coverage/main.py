@@ -219,7 +219,7 @@ class MKModel:
             dsum=0
             for j in np.arange(Nr):
                 
-                dsum = dsum + float(self.Stoich.iloc[j,i+1])*r[j] #Calculating the rate of production of a species i
+                dsum += float(self.Stoich.iloc[j,i+1])*r[j] #Calculating the rate of production of a species i
             
             D.append(dsum)    
         
