@@ -4,7 +4,7 @@ import pandas as pd  #package for dataframe and file extraction/creation
 import string        #package to allow for access to alphabet strings
 import math          #package to allow for the use of mathematical operators like permutation calculation
 from mpmath import * #package for precision control
-dplace=10    #Controls decimal places - used for mp.dps in mpmath precision control
+#dplace=10    #Controls decimal places - used for mp.dps in mpmath precision control
 import matplotlib.pyplot as plt         #package for plotting
 from scipy.integrate import solve_ivp   #ODE solver
 from scipy import optimize
@@ -33,6 +33,8 @@ class MKModel:
         
         self.check_massbalance(self.Atomic,self.Stoich) #Uses the stoich and atomic matrices to check that mass is conserved A*v=0
         
+        self.dplace,self.rtol,self.atol = self.ODE_Tolerances() #Specifying ODE Tolerance values
+
         self.k = self.kextract()    #Extracting the rate constants from the Param File (Note that format of the Param File is crucial)
         self.P,self.Temp = self.set_rxnconditions() #Setting reaction conditions (defaulted to values from the Param File but can also be set mannually )
         self.rate_const_correction = 'None' #Accounting for correction to the rate constants (i.e. enhancing the mean field approximation)
@@ -43,6 +45,12 @@ class MKModel:
         
         self.status='Waiting' #Used to observe the status of the ODE Convergence
         self.label='None'   #Used to pass in a label so as to know what kind of figure to plot    
+    #------------------------------------------------------------------------------------------------------------------------------    
+    def ODE_Tolerances(self,Dplace=50,reltol=1e-20,abstol=1e-10):
+        self.dplace = Dplace
+        self.rtol = reltol
+        self.atol = abstol
+        return self.dplace,self.rtol,self.atol
     #------------------------------------------------------------------------------------------------------------------------------    
     def check_massbalance(self,Atomic,Stoich): #Function to check if mass is balanced
         at_mat = Atomic.iloc[0:,1:]           #The atomic matrix
@@ -113,7 +121,7 @@ class MKModel:
        return Coeff
    #------------------------------------------------------------------------------------------------------------------------------
     def set_initial_coverages(self,init=[]): #empty sites included at the end of the code 
-        mp.dps= dplace
+        mp.dps= self.dplace
         
         ExpNoCovg = len(self.Stoich.iloc[0,len(self.P)+1:])
         if init==[]: 
@@ -229,7 +237,7 @@ class MKModel:
         else:
             return D
     #------------------------------------------------------------------------------------------------------------------------------      
-    def solve_coverage(self,t=[],initial_cov=[],method='BDF',reltol=1e-8,abstol=1e-8,Tf_eval=[],full_output=False,plot=False): #Function used for calculating (and plotting) single state transient coverages
+    def solve_coverage(self,t=[],initial_cov=[],method='BDF',Tf_eval=[],full_output=False,plot=False): #Function used for calculating (and plotting) single state transient coverages
         #Function used for solving the resulting ODEs and obtaining the corresponding surface coverages as a function of time
         if t==[]:  #Condition to make sure default time is what was set initially (from self.set_limits_of_integration()) and if a different time range is entered, it will be set as the default time limits of integration
             t=[self.Ti,self.Tf]  
@@ -248,7 +256,9 @@ class MKModel:
             T_eval=None
         else:
             T_eval=Tf_eval
-            
+
+        reltol=self.rtol
+        abstol=self.atol    
         solve = solve_ivp(self.get_ODEs,t_span,init,method,t_eval=T_eval,rtol=reltol,atol=abstol,dense_output=full_output) #ODE Solver
         
         #COnvergence Check
