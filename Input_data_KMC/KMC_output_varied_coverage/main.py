@@ -4,7 +4,6 @@ import pandas as pd  #package for dataframe and file extraction/creation
 import string        #package to allow for access to alphabet strings
 import math          #package to allow for the use of mathematical operators like permutation calculation
 from mpmath import * #package for precision control
-#dplace=10    #Controls decimal places - used for mp.dps in mpmath precision control
 import matplotlib.pyplot as plt         #package for plotting
 from scipy.integrate import solve_ivp   #ODE solver
 from scipy import optimize
@@ -33,7 +32,7 @@ class MKModel:
         
         self.check_massbalance(self.Atomic,self.Stoich) #Uses the stoich and atomic matrices to check that mass is conserved A*v=0
         
-        self.dplace,self.rtol,self.atol = self.ODE_Tolerances() #Specifying ODE Tolerance values
+        self.dplace,self.rtol,self.atol = self.ODE_Tolerances() #Controls decimal places - used for mp.dps in mpmath precision control #Specifying ODE Tolerance values
 
         self.k = self.kextract()    #Extracting the rate constants from the Param File (Note that format of the Param File is crucial)
         self.P,self.Temp = self.set_rxnconditions() #Setting reaction conditions (defaulted to values from the Param File but can also be set mannually )
@@ -46,7 +45,7 @@ class MKModel:
         self.status='Waiting' #Used to observe the status of the ODE Convergence
         self.label='None'   #Used to pass in a label so as to know what kind of figure to plot    
     #------------------------------------------------------------------------------------------------------------------------------    
-    def ODE_Tolerances(self,Dplace=50,reltol=1e-20,abstol=1e-10):
+    def ODE_Tolerances(self,Dplace=50,reltol=1e-3,abstol=1e-3):
         self.dplace = Dplace
         self.rtol = reltol
         self.atol = abstol
