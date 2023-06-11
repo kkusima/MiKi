@@ -45,10 +45,25 @@ class MKModel:
         self.status='Waiting' #Used to observe the status of the ODE Convergence
         self.label='None'   #Used to pass in a label so as to know what kind of figure to plot    
     #------------------------------------------------------------------------------------------------------------------------------    
-    def ODE_Tolerances(self,Dplace=50,reltol=1e-3,abstol=1e-3):
-        self.dplace = Dplace
-        self.rtol = reltol
-        self.atol = abstol
+    def ODE_Tolerances(self,Dplace=None,reltol=None,abstol=None):
+        if Dplace==None:
+            Dplace = 50
+            self.dplace = Dplace
+        else:
+            self.dplace = Dplace
+
+        if reltol==None:
+            reltol = 1e-3
+            self.rtol = reltol
+        else:
+            self.rtol = reltol
+
+        if abstol==None:
+            abstol = 1e-3
+            self.atol = abstol
+        else:
+            self.atol = abstol
+
         return self.dplace,self.rtol,self.atol
     #------------------------------------------------------------------------------------------------------------------------------    
     def check_massbalance(self,Atomic,Stoich): #Function to check if mass is balanced
@@ -151,7 +166,11 @@ class MKModel:
             if len(Pr)!=ExpNoP:
                 raise Exception('Number of pressure entries do not match what is required. %i entries are needed.'%(ExpNoP))
             else:
+                #Changing the number of decimal places/precision of input Pressures
+                for i in np.arange(len(Pr)):
+                    Pr[i]=mpf(Pr[i])
                 self.P = Pr    
+
         self.Temp = Temp
         
         return self.P,self.Temp
