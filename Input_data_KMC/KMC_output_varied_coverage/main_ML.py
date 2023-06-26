@@ -2159,10 +2159,10 @@ class ML_Fitting:
                     ax.set_xlabel('Time, t, [s]')
                     if Comp =='iRates':
                         ax.set_ylabel(r"Rates of Production, $R_i$")
-                        ax.set_title('Rates of production versus Time_ for Simulation_'+ df['Sim_ndex'].iloc[i] +': _'+df['Sim_names'].iloc[0]+'| A:CO* ; B:O*')
+                        ax.set_title('Rates of production versus Time_ for Simulation_'+ df['Sim_ndex'].iloc[i] +': _'+df['Sim_names'].iloc[0]+'| A:O* ; B:CO*')
                     elif Comp == 'Covg':
                         ax.set_ylabel(r"Coverage, $\theta_i, [ML]$")
-                        ax.set_title('Coverages versus Time_for Simulation_'+ df['Sim_ndex'].iloc[i] +': _'+df['Sim_names'].iloc[0]+'| A:CO* ; B:O*')
+                        ax.set_title('Coverages versus Time_for Simulation_'+ df['Sim_ndex'].iloc[i] +': _'+df['Sim_names'].iloc[0]+'| A:O* ; B:CO*')
                     
                     
                     #Extracting MKM results: ------------------------------------------------
@@ -2211,6 +2211,7 @@ class ML_Fitting:
         import matplotlib
 
         New_out_df = self.Vis_Exp_MKM_Dataframe(p_c = p_c)
+
 
         if self.Input_Format=='KMC':
             exp_name ='KMC'
