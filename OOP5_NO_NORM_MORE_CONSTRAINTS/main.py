@@ -4,7 +4,7 @@ import pandas as pd  #package for dataframe and file extraction/creation
 import string        #package to allow for access to alphabet strings
 import math          #package to allow for the use of mathematical operators like permutation calculation
 from mpmath import * #package for precision control
-dplace=10    #Controls decimal places - used for mp.dps in mpmath precision control
+dplace=50    #Controls decimal places - used for mp.dps in mpmath precision control
 import matplotlib.pyplot as plt         #package for plotting
 from scipy.integrate import solve_ivp   #ODE solver
 from scipy import optimize
@@ -228,7 +228,7 @@ class MKModel:
         else:
             return D
     #------------------------------------------------------------------------------------------------------------------------------      
-    def solve_coverage(self,t=[],initial_cov=[],method='BDF',reltol=1e-8,abstol=1e-8,Tf_eval=[],full_output=False,plot=False): #Function used for calculating (and plotting) single state transient coverages
+    def solve_coverage(self,t=[],initial_cov=[],method='BDF',reltol=1e-9,abstol=1e-9,Tf_eval=[],full_output=False,plot=False): #Function used for calculating (and plotting) single state transient coverages
         #Function used for solving the resulting ODEs and obtaining the corresponding surface coverages as a function of time
         if t==[]:  #Condition to make sure default time is what was set initially (from self.set_limits_of_integration()) and if a different time range is entered, it will be set as the default time limits of integration
             t=[self.Ti,self.Tf]  

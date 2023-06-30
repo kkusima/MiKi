@@ -53,13 +53,13 @@ class MKModel:
             self.dplace = Dplace
 
         if reltol==None:
-            reltol = 1e-3
+            reltol = 1e-8
             self.rtol = reltol
         else:
             self.rtol = reltol
 
         if abstol==None:
-            abstol = 1e-3
+            abstol = 1e-8
             self.atol = abstol
         else:
             self.atol = abstol
@@ -275,8 +275,8 @@ class MKModel:
         else:
             T_eval=Tf_eval
 
-        reltol=self.rtol
-        abstol=self.atol    
+        reltol= self.rtol    
+        abstol= self.atol    
         solve = solve_ivp(self.get_ODEs,t_span,init,method,t_eval=T_eval,rtol=reltol,atol=abstol,dense_output=full_output) #ODE Solver
         
         #COnvergence Check
