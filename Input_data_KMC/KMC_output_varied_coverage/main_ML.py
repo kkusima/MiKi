@@ -53,13 +53,13 @@ class MKModel:
             self.dplace = Dplace
 
         if reltol==None:
-            reltol = 1e-3
+            reltol = 1e-8
             self.rtol = reltol
         else:
             self.rtol = reltol
 
         if abstol==None:
-            abstol = 1e-3
+            abstol = 1e-8
             self.atol = abstol
         else:
             self.atol = abstol
@@ -1629,6 +1629,10 @@ class ML_Fitting:
         self.forced_param = self.MKM.k
         self.fitted_param = self.MKM.k
         
+        self.test_train_split = 0.1
+        self.ML_algorithm = 'KNN'
+
+
         self.Input_Format = Input_Format
         if self.Input_Format == 'KMC':
             self.Input_KMC_init = self.KMC_Input_Folders_Initialization()
@@ -2542,7 +2546,14 @@ class ML_Fitting:
         return X_all,Y_all
     
     #-------------------------------------------------------------------------------------------------------------------------------------
-    def X_Y_train_test_split(self,p_c = 0.1):
+    def X_Y_train_test_split(self,p_c = None):
+
+        if p_c==None:
+            p_c = self.test_train_split
+        else:
+            p_c = p_c
+            
+
         import random
         print('Percent of test data selected:',p_c*100,'%')
 
@@ -2576,11 +2587,14 @@ class ML_Fitting:
         Y_train = Y_train.drop(columns=['Sim_ndex','Sim_names'])
 
         return X_train,Y_train,X_test,Y_test
-    
-
     #-------------------------------------------------------------------------------------------------------------------------------------
-    def ML_model( X_train, Y_train, algorithm="XGBoost"):
-    
+    def ML_model(self,X_train, Y_train, algorithm=None):
+
+        if algorithm!=None:
+            self.ML_algorithm = algorithm
+        else:
+            algorithm = self.ML_algorithm
+
         #XGBoost Algorithm
         #https://xgboost.readthedocs.io/en/stable/python/python_api.html
         if algorithm=="XGBoost":  
@@ -2648,7 +2662,13 @@ class ML_Fitting:
         return reg
 
     #-------------------------------------------------------------------------------------------------------------------------------------
-    def ML_Model_Select(self,ALGORITHM_NAME = "KNN"):
+    def ML_Model_Select(self, ALGORITHM_NAME = None):
+        if ALGORITHM_NAME!=None:
+            self.ML_algorithm = ALGORITHM_NAME
+        else:
+            ALGORITHM_NAME = self.ML_algorithm
+
+
         import time
         ######### OPTIONS: 'XGBoost','ANN','KNN','RandomForest'#########
         ################################################################
@@ -2658,7 +2678,7 @@ class ML_Fitting:
         X_train,Y_train,X_test,Y_test = self.X_Y_train_test_split()
 
         start_time = time.time()
-        reg = self.ML_model(X_train, Y_train, algorithm = ALGORITHM_NAME)
+        reg = self.ML_model(X_train, Y_train)
         end_time = time.time()
 
         elapsed_time = end_time - start_time
@@ -2726,11 +2746,16 @@ class ML_Fitting:
             return Test_input
         
     #-------------------------------------------------------------------------------------------------------------------------------------
-    def ML_Fitting(self, alg = 'KNN', test_train_split=0.1, plot=True):
-
-        X_train,Y_train,X_test,Y_test = self.X_Y_train_test_split(p_c = test_train_split )
+    def ML_Fitting(self, alg = None, test_train_split=None, plot=True):
+        if test_train_split != None:
+            self.test_train_split = test_train_split            
         
-        reg = self.ML_Model_Select(X_train,Y_train, ALGORITHM_NAME=alg)
+        if alg!=None:
+            self.ML_algorithm = alg
+        else:
+            alg = self.ML_algorithm
+
+        reg = self.ML_Model_Select()
 
         Test_input  = self.External_Dataframe()
 
