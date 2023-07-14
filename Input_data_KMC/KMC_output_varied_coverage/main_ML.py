@@ -32,7 +32,7 @@ class MKModel:
         
         self.check_massbalance(self.Atomic,self.Stoich) #Uses the stoich and atomic matrices to check that mass is conserved A*v=0
         
-        self.dplace,self.rtol,self.atol = self.ODE_Tolerances() #Controls decimal places - used for mp.dps in mpmath precision control #Specifying ODE Tolerance values
+        self.dplace,self.rtol,self.atol = self.ODE_Tolerances(Dplace=None,reltol=None,abstol=None) #Controls decimal places - used for mp.dps in mpmath precision control #Specifying ODE Tolerance values
 
         self.k = self.kextract()    #Extracting the rate constants from the Param File (Note that format of the Param File is crucial)
         self.P,self.Temp = self.set_rxnconditions() #Setting reaction conditions (defaulted to values from the Param File but can also be set mannually )
@@ -1631,15 +1631,25 @@ class ML_Fitting:
         
         self.test_train_split = 0.1
         self.ML_algorithm = 'KNN'
-
-
+       
         self.Input_Format = Input_Format
+
         if self.Input_Format == 'KMC':
+            print('Type of Experimental Training Files: KMC')
             self.Input_KMC_init = self.KMC_Input_Folders_Initialization()
             self.EXP_Dictionary = self.KMC_Dictionary()
 
-
-
+        # self.X_train = X_train
+        # self.Y_train = Y_train
+        # self.X_test = X_test
+        # self.Y_test = Y_test
+        # self.Exp_gas_name
+        # self.Exp_surf_name
+        # self.KMC_n_gas_species
+        # self.KMC_n_surf_species
+        # self.External_Dataframe() #External Input From Input CSV, to be fitted on
+        # self.external_data_input
+        # self.external_data_output
 
         
         # self.P ,self.Temp = self.set_rxnconditions() #Setting reaction conditions (defaulted to values from the Param File but can also be set mannually )
@@ -1668,6 +1678,7 @@ class ML_Fitting:
             i+=1
         
         self.KMC_Sim_folder_names = Sim_folder_names
+        
         #--------------------------------------------------------------------------------------------
         
         set_init_coverages = np.empty([len(Sim_folder_names),4])
@@ -1791,7 +1802,7 @@ class ML_Fitting:
                     fin_text = 'SIMULATIONS MATCH AS EXPECTED'
 
 
-        text = "Input Files are Initialized."
+        text = "Relevant Input Files are successfuly Initialized."
 
         return print('\n','Number of simulations:',i,'\n',text,'\n', fin_text, '\n')
     
@@ -1981,7 +1992,7 @@ class ML_Fitting:
         if self.Input_Format == 'KMC': #need to generalize init_covgs more
             MKM_init_coverages = np.empty([len(self.KMC_Sim_folder_names),self.KMC_n_surf_species])
 
-            self.MKM.ODE_Tolerances(Dplace=50,reltol=1e-5,abstol=1e-8)
+            self.MKM.ODE_Tolerances(Dplace=50,reltol=1e-8,abstol=1e-8)
 
             n = self.KMC_n_sim
             n_points = self.KMC_n_points #From KMC simulation 
@@ -2043,12 +2054,14 @@ class ML_Fitting:
     #                                             ,p0=initial_vals)
 
     #-------------------------------------------------------------------------------------------------------------------------------------
-    def Exp_MKM_Dataframe(self,params=[]):
+    def Exp_MKM_Dataframe(self,params=[]): #Adding MKM Data
         self.MKM.ODE_Tolerances(Dplace=50,reltol=1e-5,abstol=1e-8)
         if params==[]:
             params = self.MKM.k
         else:
-            params = params
+            self.MKM.k = params
+            self.MKM_test_inp.k = params
+
 
         if self.fit_k == False:
             self.MKM_Dictionary = self.MKModelling(*params)
@@ -2079,7 +2092,8 @@ class ML_Fitting:
         if params==[]:
             params = self.fitted_param
         else:
-            params = params
+            self.MKM.k = params
+            self.MKM_test_inp.k = params
 
         out_df = self.Exp_MKM_Dataframe(params = params)
         rmse_matrix = []
@@ -2131,7 +2145,8 @@ class ML_Fitting:
         if params==[]:
             params = self.MKM.k
         else:
-            params = params
+            self.MKM.k = params
+            self.MKM_test_inp.k = params
 
         exp_mkm_df = self.Exp_MKM_Dataframe(params = params)
         out_df = exp_mkm_df
@@ -2446,14 +2461,14 @@ class ML_Fitting:
             plt.show()
 
     #-------------------------------------------------------------------------------------------------------------------------------------
-    def MKM_Dataframe(self):
+    # def MKM_Dataframe(self):
         
-        if self.fit_k == False :
-            exp_mkm_df = self.Exp_MKM_Dataframe(params = self.MKM.k)
+    #     if self.fit_k == False :
+    #         exp_mkm_df = self.Exp_MKM_Dataframe(params = self.MKM.k)
 
-        MKM_df = exp_mkm_df[exp_mkm_df.columns.drop(list(exp_mkm_df.filter(regex='KMC_')))]
+    #     MKM_df = exp_mkm_df[exp_mkm_df.columns.drop(list(exp_mkm_df.filter(regex='KMC_')))]
 
-        return MKM_df
+    #     return MKM_df
     #-------------------------------------------------------------------------------------------------------------------------------------
     def Percent_diff_feat(self):
         rx,ry,rz = np.shape(self.EXP_Dictionary['iRates'])
@@ -2534,6 +2549,7 @@ class ML_Fitting:
     def X_Y_full_dataset(self):
         
         out_df = self.Full_Dataset_Dataframe()
+        out_df = out_df[out_df.columns.drop(list(out_df.filter(regex='KMC_')))] #Removing KMC Columns to leave it explicitly MKM
 
         All_columns = out_df.columns.to_list()
         target_columns = list(filter(lambda x: ('Corr') in x or ('P_diff') in x, All_columns))
@@ -2585,6 +2601,11 @@ class ML_Fitting:
 
         X_train = X_train.drop(columns=['Sim_ndex','Sim_names'])
         Y_train = Y_train.drop(columns=['Sim_ndex','Sim_names'])
+
+        self.X_train = X_train
+        self.Y_train = Y_train
+        self.X_test = X_test
+        self.Y_test = Y_test
 
         return X_train,Y_train,X_test,Y_test
     #-------------------------------------------------------------------------------------------------------------------------------------
@@ -2701,7 +2722,7 @@ class ML_Fitting:
                 matrix_test_data_ini_cov[i] = test_data_ini_cov
         
             self.MKM_test_inp.set_limits_of_integration(Ti=float(KMC_Data_EXP['Time'].head(1)),Tf=float(KMC_Data_EXP['Time'].tail(1)))
-            self.MKM_test_inp.ODE_Tolerances(Dplace=50,reltol=1e-5,abstol=1e-8)
+            self.MKM_test_inp.ODE_Tolerances(Dplace=50,reltol=1e-8,abstol=1e-8)
 
             self.MKM_test_inp.k = self.forced_param #From fitting or external
 
@@ -2716,13 +2737,13 @@ class ML_Fitting:
             solb,soltb = self.MKM_test_inp.solve_rate_production(Tf_eval=test_data_time_interv,plot=False)
             MKM_Rates_test_inp = (solb[:,0:self.KMC_n_gas_species])
 
-            Exp_surf_name = KMC_Data_EXP.columns.to_list()[1:self.KMC_n_surf_species+1]
-            Exp_gas_name = [i[-2:] for i in KMC_Data_EXP.columns.to_list()[self.KMC_n_surf_species+1:]]
+            self.Exp_surf_name = KMC_Data_EXP.columns.to_list()[1:self.KMC_n_surf_species+1]
+            self.Exp_gas_name = [i[2:] for i in KMC_Data_EXP.columns.to_list()[self.KMC_n_surf_species+1:]]
 
             Test_input = pd.DataFrame()
 
             #Adding initial coverages
-            surf_names = Exp_surf_name
+            surf_names = self.Exp_surf_name
             for i in np.arange(self.KMC_n_surf_species):
                 spec = surf_names[i]
                 Test_input['Init_Covg_'+spec] = pd.DataFrame(matrix_test_data_ini_cov)[i]
@@ -2731,13 +2752,13 @@ class ML_Fitting:
             Test_input['Time'] = pd.DataFrame(test_data_time_interv)
 
             #Adding coverage profiles of surface species
-            surf_names = Exp_surf_name
+            surf_names = self.Exp_surf_name
             for i in np.arange(self.KMC_n_surf_species):
                 spec = surf_names[i]
                 Test_input['MKM_Covg_'+spec] = pd.DataFrame(MKM_Covg_test_inp)[i]
                 
             #Adding iRates profiles of gaseous species
-            gs_names = Exp_gas_name
+            gs_names = self.Exp_gas_name
             for i in np.arange(self.KMC_n_gas_species):
                 spec = gs_names[i]
                 Test_input['MKM_iRates_'+spec] = pd.DataFrame(MKM_Rates_test_inp)[i]
@@ -2758,8 +2779,12 @@ class ML_Fitting:
         reg = self.ML_Model_Select()
 
         Test_input  = self.External_Dataframe()
-
+        self.external_data_input = Test_input #For program outputing purposes
+        
         Test_output = reg.predict(Test_input)
+        self.external_data_output = Test_output #For program outputing purposes
+        
+        self.Predicted_ML_output = Test_output
 
         if self.Input_Format == 'KMC':
 
@@ -2770,7 +2795,7 @@ class ML_Fitting:
             KMC_Data_EXP_rates = self.Data_EXP_rates #KMC_INPUT_RATE_DATA
             
             MKM_Rates_test_inp = Test_input[[col for col in Test_input if 'MKM_'+'iRates'+'_' in col]].to_numpy()
-            #Calculating extracted ML predicted rates
+            #Calculating ML corrected predicted rates
             ML_Rates_pred = np.zeros((len(test_data_time_interv),len(self.Exp_Gspecies)))  #O2, #CO, CO2
             for i in np.arange(np.shape(ML_Rates_pred)[0]):
                 for j in np.arange(np.shape(ML_Rates_pred)[1]):
@@ -2802,6 +2827,8 @@ class ML_Fitting:
                 # plt.ylim([-0.2,0.2])
                 plt.legend(fontsize=5, loc='best')
                 plt.show()
+
+                return plt.figure
 
 
 
