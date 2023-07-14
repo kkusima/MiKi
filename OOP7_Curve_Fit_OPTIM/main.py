@@ -224,12 +224,12 @@ class MKModel:
             
             D.append(dsum)    
         
-        fac = np.sqrt(1.0+np.sum([ x**2 for x in D ]))
-        D = D/fac
-    #     print(D)
-        D = np.append(D,1.0/fac)
+#         fac = np.sqrt(1.0+np.sum([ x**2 for x in D ]))
+#         D = D/fac
+#     #     print(D)
+#         D = np.append(D,1.0/fac)
 
-        D = np.transpose(D)    
+#         D = np.transpose(D)    
 
         if coverage==True:    
             return D[len(self.P):]
@@ -258,8 +258,9 @@ class MKModel:
 
         if method=='LSODA':
             vector = True
-            
-        solve = solve_ivp(self.get_ODEs,t_span,init,method,vectorized=vector, t_eval=T_eval,rtol=reltol,atol=abstol,dense_output=full_output) #ODE Solver
+        else:
+            vector = False
+        solve = solve_ivp(self.get_ODEs,t_span,init,method,t_eval=T_eval,rtol=reltol,atol=abstol,dense_output=full_output) #ODE Solver
         
         #COnvergence Check
         if solve.status!=0:
