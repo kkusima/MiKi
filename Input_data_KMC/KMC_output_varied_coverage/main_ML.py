@@ -37,8 +37,7 @@ class MKModel:
         self.k = self.kextract()    #Extracting the rate constants from the Param File (Note that format of the Param File is crucial)
         self.P,self.Temp = self.set_rxnconditions() #Setting reaction conditions (defaulted to values from the Param File but can also be set mannually )
         self.rate_const_correction = 'None' #Accounting for correction to the rate constants (i.e. enhancing the mean field approximation)
-        self.BG_matrix='auto' #Bragg williams constant matrix
-        self.Coeff = self.Coeff_extract() #Extracting the coverage dependance coefficients
+        self.BG_matrix='uniform' #Bragg williams constant matrix
         self.Ti,self.Tf=self.set_limits_of_integration() #Sets the range of time needed to solve for the relavant MK ODEs, defaults to 0-6e6 but can also be manually set
         self.init_cov=self.set_initial_coverages() #Sets the initial coverage of the surface species, defaults to zero coverage but can also be set manually
         
@@ -103,36 +102,46 @@ class MKModel:
                 veck.append(self.Param.iloc[j,2])  
         return np.array(veck) #Converts from list to array
     #------------------------------------------------------------------------------------------------------------------------------
-    def Coeff_extract(self):
-       colmn = len(self.Stoich.iloc[0,1:]) - len(self.P) #Number of columns (i.e rate coefficients = no. of surface species being investigated)
-       row = len(self.k) #number of rows = number of rate constants (i.e reaction steps)
-       Coeff = np.empty([row,colmn]) #initializing the coefficient matrix
-       index = list(string.ascii_lowercase)[:colmn] #index holding the relevant letters (a-w) (Therefore 23 different species only possible)
-       
-       #Counting how many 'const' are in the Param file tobe used to check whether to use param file
-       ls = self.Param.values.tolist() #The Param File as a list
-       lscount = 0
-       for i in np.arange(np.shape(ls)[0]):
-           if ('const' in ls[i]):
-               lscount = lscount + 1
-       
-       if self.BG_matrix == 'auto':
-           if lscount==row*(colmn-1): #Param file must have exact number of constants (even if 0 has to be used) or else a 1 matrix is assumed #colm - 1 is done to remove empty coverage
-           
-           #Extracting the coefficients from the Param matrix
-               for i in np.arange(colmn):
-                   count = 0 #Corresponds to reaction. Also, treats forward and revers rxn separately
-                   for j in np.arange(len(self.Param.iloc[:,0])): #looping through all param file rows
-                       if ('const' == self.Param.iloc[j,0]) and (str(index[i]) in self.Param.iloc[j,1]):
-                           Coeff[count][i]=self.Param.iloc[j,2]
-                           count += 1            
-           else:
+    def Coeff_extract(self,multipls = []):
+        #Coeff extract for non-local adsorbate adsorbate interaction correction  #multipls to be used to multiply bragg williams constants with these corresponding scalars per species
+        colmn = len(self.Stoich.iloc[0,1:]) - len(self.P) #Number of columns (i.e rate coefficients = no. of surface species being investigated)
+        row = len(self.k) #number of rows = number of rate constants (i.e reaction steps)
+        Coeff = np.empty([row,colmn]) #initializing the coefficient matrix
+        index = list(string.ascii_lowercase)[:colmn] #index holding the relevant letters (a-w) (Therefore 23 different species only possible)
+
+        #Counting how many 'const' are in the Param file tobe used to check whether to use param file
+        ls = self.Param.values.tolist() #The Param File as a list
+        lscount = 0
+        for i in np.arange(np.shape(ls)[0]):
+            if ('const' in ls[i]):
+                lscount = lscount + 1
+
+        if self.BG_matrix == 'auto':
+            if lscount==row*(colmn-1): #Param file must have exact number of constants (even if 0 has to be used) or else a 1 matrix is assumed #colm - 1 is done to remove empty coverage
+            
+            #Extracting the coefficients from the Param matrix
+                for i in np.arange(colmn):
+                    count = 0 #Corresponds to reaction. Also, treats forward and revers rxn separately
+                    for j in np.arange(len(self.Param.iloc[:,0])): #looping through all param file rows
+                        if ('const' == self.Param.iloc[j,0]) and (str(index[i]) in self.Param.iloc[j,1]):
+                            Coeff[count][i]=self.Param.iloc[j,2]
+                            count += 1            
+            else:
                 print("Note: Constant coefficients aren't specified or don't match model requirements.\n A default uniform matrix coefficient of ones has been used.")                    
                 Coeff = np.ones((row,(colmn-1)))
-                
-        # elif self.BG_matrix == 'manual': #####################  Needs to be updated to allow for external manual inputting of BG_matrix  ###########################
-       
-       return Coeff
+
+        if self.BG_matrix == 'uniform':
+            Beta = np.ones(shape=(len(self.k),colmn)) #i = rate constants (8) ; j = surface species
+            if multipls==[]:
+                multipls=np.ones(np.shape(Beta)[1])
+
+            for i in np.arange(len(multipls)):
+                Beta[:,i] *= multipls[i]  #Multiplying Beta's according to surface species by a constant scalar
+
+            Coeff = Beta
+
+        self.Coeff = Coeff   #Object to be used for rate determiniing and covg dependent rate coeff.     
+        return Coeff
    #------------------------------------------------------------------------------------------------------------------------------
     def set_initial_coverages(self,init=[]): #empty sites included at the end of the code 
         mp.dps= self.dplace
@@ -181,6 +190,7 @@ class MKModel:
         return self.Ti,self.Tf
     #------------------------------------------------------------------------------------------------------------------------------
     def ratecoeff(self,kref,Coeff,Theta):
+        import scipy.special as sp
         if self.rate_const_correction=='None':
             K = kref
             return K
@@ -188,7 +198,8 @@ class MKModel:
             if len(Coeff) != len(Theta):
                 raise Exception('The number of the coefficients doesnt match the relevant coverages. Please make sure to check the Parameters csv file for any errors. ')
             else:
-                K = kref*np.exp(float(logsumexp(np.sum(np.multiply(Coeff,Theta)))))  #/RT lumped into a and b assuming T is constant
+                correction = np.exp(float(np.dot(Theta,Coeff)))
+                K = kref*correction
                 return K
     #------------------------------------------------------------------------------------------------------------------------------
     def get_rates(self,cov=[]): #cov = coverages  #Function used to calculate the rates of reactions
@@ -226,6 +237,7 @@ class MKModel:
                 elif self.Stoich.iloc[j,i+1]>0: #extracting only reverse relevant rate parameters  #reverse rxn reactants /encounter probability
                     rvs.append(matr[i]**abs(self.Stoich.iloc[j,i+1]))   
                     
+            
             r[j] = (self.ratecoeff(kf[j],Coeff_f[j][:],THETA[:])*np.prod(fwd)) - (self.ratecoeff(kr[j],Coeff_r[j][:],THETA[:])*np.prod(rvs)) #Calculating the rate of reaction
          
         r = np.transpose(r)
@@ -526,6 +538,7 @@ class MKModel:
         full_feature = full_feature.to_numpy()
         full_time = full_time[1:]
 
+        self.label = label
         if self.label == 'coverages':
             title = 'coverages'
         elif self.label == 'rates_p':
@@ -540,7 +553,9 @@ class MKModel:
         States_Table[States[1]+',P[bar]'] = pd.DataFrame([np.format_float_scientific(i, exp_digits=2) for i in State2])
 
         enablePrint()
-        print(States_Table)
+        print(States_Table.to_markdown())
+        print('\nTime in State 1:',  '%e' % t1, 's')
+        print('Time in State 2:', '%e' % t2, 's')
         print('\nNumber of Cycles:', total_time/(t1+t2) , '\n')
         
         if plot==False:
