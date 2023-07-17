@@ -1,18 +1,18 @@
-import sys, os
+import sys, os, glob
 import numpy as np   #package for numerical arithmetics and analysis
 import pandas as pd  #package for dataframe and file extraction/creation
 import string        #package to allow for access to alphabet strings
 import math          #package to allow for the use of mathematical operators like permutation calculation
 from mpmath import * #package for precision control
-dplace=10    #Controls decimal places - used for mp.dps in mpmath precision control
 import matplotlib.pyplot as plt         #package for plotting
 from scipy.integrate import solve_ivp   #ODE solver
 from scipy import optimize
 from scipy.special import logsumexp
 from numdifftools import Jacobian, Hessian
 from autograd import jacobian, hessian
+import lmfit
+from lmfit import Model, Parameters,minimize, fit_report
 import copy
-from numba import njit 
 
 # Disable Printing
 def blockPrint():
@@ -32,16 +32,38 @@ class MKModel:
         
         self.check_massbalance(self.Atomic,self.Stoich) #Uses the stoich and atomic matrices to check that mass is conserved A*v=0
         
+        self.dplace,self.rtol,self.atol = self.ODE_Tolerances(Dplace=None,reltol=None,abstol=None) #Controls decimal places - used for mp.dps in mpmath precision control #Specifying ODE Tolerance values
+
         self.k = self.kextract()    #Extracting the rate constants from the Param File (Note that format of the Param File is crucial)
         self.P,self.Temp = self.set_rxnconditions() #Setting reaction conditions (defaulted to values from the Param File but can also be set mannually )
         self.rate_const_correction = 'None' #Accounting for correction to the rate constants (i.e. enhancing the mean field approximation)
-        self.BG_matrix='auto' #Bragg williams constant matrix
-        self.Coeff = self.Coeff_extract() #Extracting the coverage dependance coefficients
+        self.BG_matrix='uniform' #Bragg williams constant matrix
         self.Ti,self.Tf=self.set_limits_of_integration() #Sets the range of time needed to solve for the relavant MK ODEs, defaults to 0-6e6 but can also be manually set
         self.init_cov=self.set_initial_coverages() #Sets the initial coverage of the surface species, defaults to zero coverage but can also be set manually
         
         self.status='Waiting' #Used to observe the status of the ODE Convergence
         self.label='None'   #Used to pass in a label so as to know what kind of figure to plot    
+    #------------------------------------------------------------------------------------------------------------------------------    
+    def ODE_Tolerances(self,Dplace=None,reltol=None,abstol=None):
+        if Dplace==None:
+            Dplace = 50
+            self.dplace = Dplace
+        else:
+            self.dplace = Dplace
+
+        if reltol==None:
+            reltol = 1e-8
+            self.rtol = reltol
+        else:
+            self.rtol = reltol
+
+        if abstol==None:
+            abstol = 1e-8
+            self.atol = abstol
+        else:
+            self.atol = abstol
+
+        return self.dplace,self.rtol,self.atol
     #------------------------------------------------------------------------------------------------------------------------------    
     def check_massbalance(self,Atomic,Stoich): #Function to check if mass is balanced
         at_mat = Atomic.iloc[0:,1:]           #The atomic matrix
@@ -80,39 +102,49 @@ class MKModel:
                 veck.append(self.Param.iloc[j,2])  
         return np.array(veck) #Converts from list to array
     #------------------------------------------------------------------------------------------------------------------------------
-    def Coeff_extract(self):
-       colmn = len(self.Stoich.iloc[0,1:]) - len(self.P) #Number of columns (i.e rate coefficients = no. of surface species being investigated)
-       row = len(self.k) #number of rows = number of rate constants (i.e reaction steps)
-       Coeff = np.empty([row,colmn]) #initializing the coefficient matrix
-       index = list(string.ascii_lowercase)[:colmn] #index holding the relevant letters (a-w) (Therefore 23 different species only possible)
-       
-       #Counting how many 'const' are in the Param file tobe used to check whether to use param file
-       ls = self.Param.values.tolist() #The Param File as a list
-       lscount = 0
-       for i in np.arange(np.shape(ls)[0]):
-           if ('const' in ls[i]):
-               lscount = lscount + 1
-       
-       if self.BG_matrix == 'auto':
-           if lscount==row*(colmn-1): #Param file must have exact number of constants (even if 0 has to be used) or else a 1 matrix is assumed #colm - 1 is done to remove empty coverage
-           
-           #Extracting the coefficients from the Param matrix
-               for i in np.arange(colmn):
-                   count = 0 #Corresponds to reaction. Also, treats forward and revers rxn separately
-                   for j in np.arange(len(self.Param.iloc[:,0])): #looping through all param file rows
-                       if ('const' == self.Param.iloc[j,0]) and (str(index[i]) in self.Param.iloc[j,1]):
-                           Coeff[count][i]=self.Param.iloc[j,2]
-                           count += 1            
-           else:
+    def Coeff_extract(self,multipls = []):
+        #Coeff extract for non-local adsorbate adsorbate interaction correction  #multipls to be used to multiply bragg williams constants with these corresponding scalars per species
+        colmn = len(self.Stoich.iloc[0,1:]) - len(self.P) #Number of columns (i.e rate coefficients = no. of surface species being investigated)
+        row = len(self.k) #number of rows = number of rate constants (i.e reaction steps)
+        Coeff = np.empty([row,colmn]) #initializing the coefficient matrix
+        index = list(string.ascii_lowercase)[:colmn] #index holding the relevant letters (a-w) (Therefore 23 different species only possible)
+
+        #Counting how many 'const' are in the Param file tobe used to check whether to use param file
+        ls = self.Param.values.tolist() #The Param File as a list
+        lscount = 0
+        for i in np.arange(np.shape(ls)[0]):
+            if ('const' in ls[i]):
+                lscount = lscount + 1
+
+        if self.BG_matrix == 'auto':
+            if lscount==row*(colmn-1): #Param file must have exact number of constants (even if 0 has to be used) or else a 1 matrix is assumed #colm - 1 is done to remove empty coverage
+            
+            #Extracting the coefficients from the Param matrix
+                for i in np.arange(colmn):
+                    count = 0 #Corresponds to reaction. Also, treats forward and revers rxn separately
+                    for j in np.arange(len(self.Param.iloc[:,0])): #looping through all param file rows
+                        if ('const' == self.Param.iloc[j,0]) and (str(index[i]) in self.Param.iloc[j,1]):
+                            Coeff[count][i]=self.Param.iloc[j,2]
+                            count += 1            
+            else:
                 print("Note: Constant coefficients aren't specified or don't match model requirements.\n A default uniform matrix coefficient of ones has been used.")                    
                 Coeff = np.ones((row,(colmn-1)))
-                
-        # elif self.BG_matrix == 'manual': #####################  Needs to be updated to allow for external manual inputting of BG_matrix  ###########################
-       
-       return Coeff
+
+        if self.BG_matrix == 'uniform':
+            Beta = np.ones(shape=(len(self.k),colmn)) #i = rate constants (8) ; j = surface species
+            if multipls==[]:
+                multipls=np.ones(np.shape(Beta)[1])
+
+            for i in np.arange(len(multipls)):
+                Beta[:,i] *= multipls[i]  #Multiplying Beta's according to surface species by a constant scalar
+
+            Coeff = Beta
+
+        self.Coeff = Coeff   #Object to be used for rate determiniing and covg dependent rate coeff.     
+        return Coeff
    #------------------------------------------------------------------------------------------------------------------------------
     def set_initial_coverages(self,init=[]): #empty sites included at the end of the code 
-        mp.dps= dplace
+        mp.dps= self.dplace
         
         ExpNoCovg = len(self.Stoich.iloc[0,len(self.P)+1:])
         if init==[]: 
@@ -143,7 +175,11 @@ class MKModel:
             if len(Pr)!=ExpNoP:
                 raise Exception('Number of pressure entries do not match what is required. %i entries are needed.'%(ExpNoP))
             else:
+                #Changing the number of decimal places/precision of input Pressures
+                for i in np.arange(len(Pr)):
+                    Pr[i]=mpf(Pr[i])
                 self.P = Pr    
+
         self.Temp = Temp
         
         return self.P,self.Temp
@@ -154,6 +190,7 @@ class MKModel:
         return self.Ti,self.Tf
     #------------------------------------------------------------------------------------------------------------------------------
     def ratecoeff(self,kref,Coeff,Theta):
+        import scipy.special as sp
         if self.rate_const_correction=='None':
             K = kref
             return K
@@ -161,7 +198,8 @@ class MKModel:
             if len(Coeff) != len(Theta):
                 raise Exception('The number of the coefficients doesnt match the relevant coverages. Please make sure to check the Parameters csv file for any errors. ')
             else:
-                K = kref*np.exp(float(logsumexp(np.sum(np.multiply(Coeff,Theta)))))  #/RT lumped into a and b assuming T is constant
+                correction = np.exp(float(np.dot(Theta,Coeff)))
+                K = kref*correction
                 return K
     #------------------------------------------------------------------------------------------------------------------------------
     def get_rates(self,cov=[]): #cov = coverages  #Function used to calculate the rates of reactions
@@ -199,10 +237,9 @@ class MKModel:
                 elif self.Stoich.iloc[j,i+1]>0: #extracting only reverse relevant rate parameters  #reverse rxn reactants /encounter probability
                     rvs.append(matr[i]**abs(self.Stoich.iloc[j,i+1]))   
                     
+            
             r[j] = (self.ratecoeff(kf[j],Coeff_f[j][:],THETA[:])*np.prod(fwd)) - (self.ratecoeff(kr[j],Coeff_r[j][:],THETA[:])*np.prod(rvs)) #Calculating the rate of reaction
-
-            r[j][np.isclose(r[j], 0, atol=1e-10)] #Limit possible rate calculation to be less not have continuos values less than 1e-10
-
+         
         r = np.transpose(r)
         
         return r  
@@ -220,23 +257,17 @@ class MKModel:
             dsum=0
             for j in np.arange(Nr):
                 
-                dsum = dsum + float(self.Stoich.iloc[j,i+1])*r[j] #Calculating the rate of production of a species i
+                dsum += float(self.Stoich.iloc[j,i+1])*r[j] #Calculating the rate of production of a species i
             
             D.append(dsum)    
         
-#         fac = np.sqrt(1.0+np.sum([ x**2 for x in D ]))
-#         D = D/fac
-#     #     print(D)
-#         D = np.append(D,1.0/fac)
-
-#         D = np.transpose(D)    
-
+        D = np.transpose(D)    
         if coverage==True:    
             return D[len(self.P):]
         else:
             return D
     #------------------------------------------------------------------------------------------------------------------------------      
-    def solve_coverage(self,t=[],initial_cov=[],method='BDF',reltol=1e-8,abstol=1e-20,Tf_eval=[],full_output=False,plot=False): #Function used for calculating (and plotting) single state transient coverages
+    def solve_coverage(self,t=[],initial_cov=[],method='BDF',Tf_eval=[],full_output=False,plot=False): #Function used for calculating (and plotting) single state transient coverages
         #Function used for solving the resulting ODEs and obtaining the corresponding surface coverages as a function of time
         if t==[]:  #Condition to make sure default time is what was set initially (from self.set_limits_of_integration()) and if a different time range is entered, it will be set as the default time limits of integration
             t=[self.Ti,self.Tf]  
@@ -256,10 +287,8 @@ class MKModel:
         else:
             T_eval=Tf_eval
 
-        if method=='LSODA':
-            vector = True
-        else:
-            vector = False
+        reltol=self.rtol
+        abstol=self.atol    
         solve = solve_ivp(self.get_ODEs,t_span,init,method,t_eval=T_eval,rtol=reltol,atol=abstol,dense_output=full_output) #ODE Solver
         
         #COnvergence Check
@@ -432,10 +461,19 @@ class MKModel:
         # blockPrint()
                         
         return Xrc
+    
     #------------------------------------------------------------------------------------------------------------------------------
     #Functions to calculate the resulting kinteic parametes from pressure switching
-    #------------------------------------------------------------------------------------------------------------------------------
-    def Dynamic(self,State1=[],State2=[],t1=None): #Function used for storing and prompting the input of the two states involved when dynamically switching pressures
+    #------------------------------------------------------------------------------------------------------------------------------        
+    def periodic_operation_two_states(self,State1=[],State2=[],t1=None,t2=None,total_time=None,n_cycles=None,Initial_Covg=[],label='coverages',plot=False): #Function used for calculating (and plotting) the dynamic transient coverages
+        if t1==None or t2==None:
+            raise Exception("t1, t2 must be inputted and either total_time or n_cycles should be inputed")
+        if total_time!=None and n_cycles!=None:
+            raise Exception(" Can not enter both total_time and n_cycles")
+        if total_time==None and n_cycles!=None:
+            total_time = (t1+t2)*n_cycles
+
+        #If State conditions are not inputted - forcing the user to input them    
         if State1==[]:
             print('\nThe Pressure Input Format:P1,P2,P3,...\n')
             print("Enter the Pressure Conditions of State 1 below:")
@@ -445,167 +483,87 @@ class MKModel:
             print("Enter the Pressure Conditions of State 2 below:")
             State2_string = input().split(',')
             State2 = [float(x) for x in State2_string]
-            
-        if t1!=None:
-            self.Tf = t1
+
+
+        States = ['State 1','State 2']
+        total_time_f=0 #final full simulation time
+        new_ti = 0 #Initial time
+        new_tf = t1 #Staring end time for state1
+        current_state = "State 1"  #starting state
+
+        full_feature=pd.DataFrame()  #Initializing full vector of coverages
+        full_time=[0.0] #Intiialising full vector of times
+        States_Table=pd.DataFrame() #Initialize Table for demonstrating states
+
+        if Initial_Covg==[]:
+            Initial_Covg = self.init_cov
+
+        while (total_time_f<total_time):
             blockPrint() #Disable printing (since warning will show up if steady state not reached)
-            self.set_rxnconditions(Pr=State1)
-            SS_State1 = self.get_SS_coverages()
-            enablePrint() #Re-enable printing
-        else:
-            self.set_rxnconditions(Pr=State1)
-            SS_State1 = self.get_SS_coverages()
 
-        return SS_State1,State2
-    #------------------------------------------------------------------------------------------------------------------------------
-    def dynamic_transient_coverages(self,State1=[],State2=[],t1=None,t2=None,plot=False): #Function used for calculating (and plotting) the dynamic transient coverages
-        
-        SS_State1,State2 = self.Dynamic(State1,State2,t1)
-        
-        if t2!=None and t1!=None:
-            self.Ti =t1
-            self.Tf = t1+t2
-            self.set_rxnconditions(Pr=State2)
-            sol,solt = self.solve_coverage(initial_cov=SS_State1)
-        elif (t2!=None and t1==None) or (t1!=None and t2==None):
-            raise Exception("Either both t1 and t2 should be inputted or neither.")
-        else:
-            self.set_rxnconditions(Pr=State2)
-            sol,solt = self.solve_coverage(initial_cov=SS_State1)
+            #Setting the pressures and automatically switching states
+            if current_state == "State 1":
+                self.set_rxnconditions(Pr=State1)
+                current_state = "State 2"
+            elif current_state == "State 2":
+                self.set_rxnconditions(Pr=State2)
+                current_state = "State 1"
+
+            self.Ti = new_ti
+            self.Tf = new_tf
+
+            self.label = label
+            if self.label == 'coverages':
+                solb,soltb=self.solve_coverage(initial_cov=Initial_Covg)
+            elif self.label == 'rates_p':
+                solb,soltb=self.solve_rate_production(initial_coverage=Initial_Covg)
+            elif self.label == 'rates_r':
+                solb,soltb=self.solve_rate_reaction(initial_coverage=Initial_Covg)
+
+            soltb = soltb-soltb[0]
+
+            #Updating Simulation Times
+            new_ti = soltb[-1]
+            new_tf = new_ti+t2
+
+            Initial_Covg = self.get_SS_coverages()
+
+            full_feature = pd.concat([full_feature,pd.DataFrame(solb)], axis=0)
+            full_time=np.hstack([full_time,full_time[-1]+soltb])
             
-        self.label='coverages'
+            total_time_f=full_time[-1]
+
+            enablePrint() #re-enabling printing
+
+        full_feature = full_feature.to_numpy()
+        full_time = full_time[1:]
+
+        self.label = label
+        if self.label == 'coverages':
+            title = 'coverages'
+        elif self.label == 'rates_p':
+            title = 'Rates of production'
+        elif self.label == 'rates_r':
+            title = 'Rates of reaction'
+
+        print('\nPeriodic Simulation of',title,'\n' )
+
+        States_Table = pd.concat([States_Table,pd.DataFrame(self.Atomic.columns.values[1:])[:len(self.P)]], axis=0)
+        States_Table[States[0]+',P[bar]'] = pd.DataFrame([np.format_float_scientific(i, exp_digits=2) for i in State1])
+        States_Table[States[1]+',P[bar]'] = pd.DataFrame([np.format_float_scientific(i, exp_digits=2) for i in State2])
+
+        enablePrint()
+        print(States_Table.to_markdown())
+        print('\nTime in State 1:',  '%e' % t1, 's')
+        print('Time in State 2:', '%e' % t2, 's')
+        print('\nNumber of Cycles:', total_time/(t1+t2) , '\n')
+        
         if plot==False:
-            return sol,solt
+            return full_feature,full_time
         elif plot==True:
-            self.plotting(sol,solt,self.label)
-            return sol,solt
-    #------------------------------------------------------------------------------------------------------------------------------
-    def dynamic_transient_rates_reaction(self,State1=[],State2=[],t1=None,t2=None,plot=False): #Function used for calculating (and plotting) the dynamic transient rates of reaction
-        
-        SS_State1,State2 = self.Dynamic(State1,State2,t1)
-        
-        if t2!=None and t1!=None:
-            self.Ti =t1
-            self.Tf = t1+t2
-            self.set_rxnconditions(Pr=State2)
-            sol,solt = self.solve_rate_reaction(initial_coverage=SS_State1)
-        elif (t2!=None and t1==None) or (t1!=None and t2==None):
-            raise Exception("Either both t1 and t2 should be inputted or neither.")
-        else:
-            self.set_rxnconditions(Pr=State2)
-            sol,solt = self.solve_rate_reaction(initial_coverage=SS_State1)
-
-        self.label='rates_r'
-        if plot==False:
-            return sol,solt
-        elif plot==True:
-            self.plotting(sol,solt,self.label)
-            return sol,solt
-    #------------------------------------------------------------------------------------------------------------------------------
-    def dynamic_transient_rates_production(self,State1=[],State2=[],t1=None,t2=None,plot=False): #Function used for calculating (and plotting) the dynamic transient rates of production
-        
-        SS_State1,State2 = self.Dynamic(State1,State2,t1)
-        
-        if t2!=None and t1!=None:
-            self.Ti =t1
-            self.Tf = t1+t2
-            self.set_rxnconditions(Pr=State2)
-            sol,solt = self.solve_rate_production(initial_coverage=SS_State1)
-        elif (t2!=None and t1==None) or (t1!=None and t2==None):
-            raise Exception("Either both t1 and t2 should be inputted or neither.")
-        else:
-            self.set_rxnconditions(Pr=State2)
-            sol,solt = self.solve_rate_production(initial_coverage=SS_State1)
-
-        self.label='rates_p'
-        if plot==False:
-            return sol,solt
-        elif plot==True:
-            self.plotting(sol,solt,self.label)
-            return sol,solt
-    #------------------------------------------------------------------------------------------------------------------------------
-    #Functions to calculate the resulting kinteic parametes from pressure switching
-    #------------------------------------------------------------------------------------------------------------------------------
-    def cyclic_dynamic_transient_coverages(self,State1=[],State2=[],t1=None,t2=None,total_time=None,plot=False): #Function used for calculating (and plotting) the dynamic transient coverages
-        if total_time!=None:
-            total_time_f=0 #final full simulation time
-            self.set_rxnconditions(Pr=State1)
-            sola,solta=self.solve_coverage(t=[0,t1])#calculating first pulse (obtaining/initialising first data set for full simulation)
-            full_covg =sola #Initializing full vector of rates_r
-            full_time=solta #Intiialising full vector of times
-
-            while (total_time_f<total_time):
-
-                blockPrint() #Disable printing (since warning will show up if steady state not reached)
-                solb,soltb=self.dynamic_transient_coverages(State1,State2,t1,t2)
-                soltb = soltb-soltb[0]
-                
-                full_covg=np.vstack([full_covg,solb])
-                full_time=np.hstack([full_time,full_time[-1]+soltb])
-                
-                total_time_f=full_time[-1]
-                enablePrint() #re-enabling printing
-                
-            self.label='coverages'
-            if plot==False:
-                return full_covg,full_time
-            elif plot==True:
-                self.plotting(full_covg,full_time,self.label)
-                return full_covg,full_time
-    #------------------------------------------------------------------------------------------------------------------------------        
-    def cyclic_dynamic_transient_rates_reaction(self,State1=[],State2=[],t1=None,t2=None,total_time=None,plot=False): #Function used for calculating (and plotting) the dynamic transient coverages
-        if total_time!=None:
-            total_time_f=0 #final full simulation time
-            self.set_rxnconditions(Pr=State1)
-            sola,solta=self.solve_rate_reaction(tf=t1)#calculating first pulse (obtaining/initialising first data set for full simulation)
-            full_rt_r =sola #Initializing full vector of rates_p
-            full_time=solta #Intiialising full vector of times
-
-            while (total_time_f<total_time):
-
-                blockPrint() #Disable printing (since warning will show up if steady state not reached)
-                solb,soltb=self.dynamic_transient_rates_reaction(State1,State2,t1,t2)
-                soltb = soltb-soltb[0]
-                
-                full_rt_r=np.vstack([full_rt_r,solb])
-                full_time=np.hstack([full_time,full_time[-1]+soltb])
-                
-                total_time_f=full_time[-1]
-                enablePrint() #re-enabling printing
-                
-            self.label='rates_r'
-            if plot==False:
-                return full_rt_r,full_time
-            elif plot==True:
-                self.plotting(full_rt_r,full_time,self.label)
-                return full_rt_r,full_time
-    #------------------------------------------------------------------------------------------------------------------------------        
-    def cyclic_dynamic_transient_rates_production(self,State1=[],State2=[],t1=None,t2=None,total_time=None,plot=False): #Function used for calculating (and plotting) the dynamic transient coverages
-        if total_time!=None:
-            total_time_f=0 #final full simulation time
-            self.set_rxnconditions(Pr=State1)
-            sola,solta=self.solve_rate_production(tf=t1)#calculating first pulse (obtaining/initialising first data set for full simulation)
-            full_rt_p =sola #Initializing full vector of coverages
-            full_time=solta #Intiialising full vector of times
-
-            while (total_time_f<total_time):
-
-                blockPrint() #Disable printing (since warning will show up if steady state not reached)
-                solb,soltb=self.dynamic_transient_rates_production(State1,State2,t1,t2)
-                soltb = soltb-soltb[0]
-                
-                full_rt_p=np.vstack([full_rt_p,solb])
-                full_time=np.hstack([full_time,full_time[-1]+soltb])
-                
-                total_time_f=full_time[-1]
-                enablePrint() #re-enabling printing
-                
-            self.label='rates_p'
-            if plot==False:
-                return full_rt_p,full_time
-            elif plot==True:
-                self.plotting(full_rt_p,full_time,self.label)
-                return full_rt_p,full_time
+            self.label = label
+            self.plotting(full_feature,full_time,self.label)
+            return full_feature,full_time
     #------------------------------------------------------------------------------------------------------------------------------
     def create_csv(self,sol=[],solt=[],k_inp=[],Name=None,label=None):
         
@@ -952,6 +910,8 @@ class Fitting:
         kin_output_gratep = np.reshape(gratep_sol,gratep_sol.size)
         kin_output = np.concatenate((kin_output_covg,kin_output_gratep))
 
+        kin_output = kin_output.astype(float) #converting from mpmath format to float for ease of implimentation in fitting packages like curvefit
+
         return kin_output  #Therefore important to note that kin_output here does not contain time
     #------------------------------------------------------------------------------------------------------------------------------    
     def error_func_0(self,fit_params):
@@ -1055,15 +1015,21 @@ class Fitting:
 
         initial_vals = np.array(self.k)
 
+
+
         if method=='lm':
-            bnds = (-inf,inf)
+            bnds = (0,inf)
             maxfev= 1000
             xtol=1e-10
             ftol=1e-15
         else:
             bnds = (0,1e20)
 
-   
+        #Converting data from mpmath to float so as to have easy implimentation on fitting packages like curvefit.
+        x_values = [float(x) for x in x_values]
+        y_values = [float(x) for x in y_values]
+        initial_vals = [float(x) for x in initial_vals]
+
         params, params_covariance = optimize.curve_fit(cost_function, x_values, y_values
                                                     ,method =method, bounds=bnds, maxfev=maxfev, xtol=xtol, ftol=ftol
                                                     ,p0=initial_vals)
@@ -1463,7 +1429,7 @@ class Fitting:
                 kin_output_covg = kin_output[:np.size(og_covg)] #extracting only coverages and not rates etc
                 covg_fit= kin_output_covg.reshape(np.shape(og_covg)) #Reshaping to allow for ease in plotting
                 
-            converg = np.sqrt(np.diag(params_covariance))
+            converg = np.sqrt(np.diag(params_covariance)) #Variance
             enablePrint() #Re-enable printing
 
         elif option=='min':
@@ -1534,13 +1500,19 @@ class Fitting:
         #     for i in np.arange(colmn):
         #         print('-> %s constants:\n'%(str(index[i])),params[(i+1)*n:(i+2)*n])
                 
-        #####Printing out the CONFIDENCE INTERVALS
-        # print('\n \033[1m' + 'Confidence Intervals: \n'+ '\033[0m')
-        # print('-> Rate Constants:\n',converg[0:n])
-        # if self.CovgDep==True:
-        #     for i in np.arange(colmn):
-        #         print('-> %s constants:\n'%(str(index[i])),converg[(i+1)*n:(i+2)*n])
-        
+        ####Printing out the COVARIANCE MATRIX
+        print('\n \033[1m' + 'Covariance Matrix: \n'+ '\033[0m')
+        print(params_covariance)
+
+        ####Printing out the CONDITION NUMBER
+        print('\n \033[1m' + 'Condition Number: \n'+ '\033[0m')
+        print('-> The condition number for the above covariance matrix:\n',np.linalg.cond(params_covariance))
+
+
+        ####Printing out the CONFIDENCE INTERVALS
+        print('\n \033[1m' + 'Confidence Intervals: \n'+ '\033[0m')
+        print('-> Rate Constants:\n',converg[0:n])
+ 
         self.fitted_k = params #Allowing for the fitted parameters to be extracted globally
         
         
