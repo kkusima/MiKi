@@ -452,8 +452,16 @@ class MKModel:
     
     #------------------------------------------------------------------------------------------------------------------------------
     #Functions to calculate the resulting kinteic parametes from pressure switching
-    #------------------------------------------------------------------------------------------------------------------------------
-    def Dynamic(self,State1=[],State2=[],t1=None): #Function used for storing and prompting the input of the two states involved when dynamically switching pressures
+    #------------------------------------------------------------------------------------------------------------------------------        
+    def periodic_operation_two_states(self,State1=[],State2=[],t1=None,t2=None,total_time=None,n_cycles=None,Initial_Covg=[],label='coverages',plot=False): #Function used for calculating (and plotting) the dynamic transient coverages
+        if t1==None or t2==None:
+            raise Exception("t1, t2 must be inputted and either total_time or n_cycles should be inputed")
+        if total_time!=None and n_cycles!=None:
+            raise Exception(" Can not enter both total_time and n_cycles")
+        if total_time==None and n_cycles!=None:
+            total_time = (t1+t2)*n_cycles
+
+        #If State conditions are not inputted - forcing the user to input them    
         if State1==[]:
             print('\nThe Pressure Input Format:P1,P2,P3,...\n')
             print("Enter the Pressure Conditions of State 1 below:")
@@ -463,167 +471,84 @@ class MKModel:
             print("Enter the Pressure Conditions of State 2 below:")
             State2_string = input().split(',')
             State2 = [float(x) for x in State2_string]
-            
-        if t1!=None:
-            self.Tf = t1
+
+
+        States = ['State 1','State 2']
+        total_time_f=0 #final full simulation time
+        new_ti = 0 #Initial time
+        new_tf = t1 #Staring end time for state1
+        current_state = "State 1"  #starting state
+
+        full_feature=pd.DataFrame()  #Initializing full vector of coverages
+        full_time=[0.0] #Intiialising full vector of times
+        States_Table=pd.DataFrame() #Initialize Table for demonstrating states
+
+        if Initial_Covg==[]:
+            Initial_Covg = self.init_cov
+
+        while (total_time_f<total_time):
             blockPrint() #Disable printing (since warning will show up if steady state not reached)
-            self.set_rxnconditions(Pr=State1)
-            SS_State1 = self.get_SS_coverages()
-            enablePrint() #Re-enable printing
-        else:
-            self.set_rxnconditions(Pr=State1)
-            SS_State1 = self.get_SS_coverages()
 
-        return SS_State1,State2
-    #------------------------------------------------------------------------------------------------------------------------------
-    def dynamic_transient_coverages(self,State1=[],State2=[],t1=None,t2=None,plot=False): #Function used for calculating (and plotting) the dynamic transient coverages
-        
-        SS_State1,State2 = self.Dynamic(State1,State2,t1)
-        
-        if t2!=None and t1!=None:
-            self.Ti =t1
-            self.Tf = t1+t2
-            self.set_rxnconditions(Pr=State2)
-            sol,solt = self.solve_coverage(initial_cov=SS_State1)
-        elif (t2!=None and t1==None) or (t1!=None and t2==None):
-            raise Exception("Either both t1 and t2 should be inputted or neither.")
-        else:
-            self.set_rxnconditions(Pr=State2)
-            sol,solt = self.solve_coverage(initial_cov=SS_State1)
+            #Setting the pressures and automatically switching states
+            if current_state == "State 1":
+                self.set_rxnconditions(Pr=State1)
+                current_state = "State 2"
+            elif current_state == "State 2":
+                self.set_rxnconditions(Pr=State2)
+                current_state = "State 1"
+
+            self.Ti = new_ti
+            self.Tf = new_tf
+
+            self.label = label
+            if self.label == 'coverages':
+                solb,soltb=self.solve_coverage(initial_cov=Initial_Covg)
+            elif self.label == 'rates_p':
+                solb,soltb=self.solve_rate_production(initial_coverage=Initial_Covg)
+            elif self.label == 'rates_r':
+                solb,soltb=self.solve_rate_reaction(initial_coverage=Initial_Covg)
+
+            soltb = soltb-soltb[0]
+
+            #Updating Simulation Times
+            new_ti = soltb[-1]
+            new_tf = new_ti+t2
+
+            Initial_Covg = self.get_SS_coverages()
+
+            full_feature = pd.concat([full_feature,pd.DataFrame(solb)], axis=0)
+            full_time=np.hstack([full_time,full_time[-1]+soltb])
             
-        self.label='coverages'
+            total_time_f=full_time[-1]
+
+            enablePrint() #re-enabling printing
+
+        full_feature = full_feature.to_numpy()
+        full_time = full_time[1:]
+
+        if self.label == 'coverages':
+            title = 'coverages'
+        elif self.label == 'rates_p':
+            title = 'Rates of production'
+        elif self.label == 'rates_r':
+            title = 'Rates of reaction'
+
+        print('\nPeriodic Simulation of',title,'\n' )
+
+        States_Table = pd.concat([States_Table,pd.DataFrame(self.Atomic.columns.values[1:])[:len(self.P)]], axis=0)
+        States_Table[States[0]+',P[bar]'] = pd.DataFrame([np.format_float_scientific(i, exp_digits=2) for i in State1])
+        States_Table[States[1]+',P[bar]'] = pd.DataFrame([np.format_float_scientific(i, exp_digits=2) for i in State2])
+
+        enablePrint()
+        print(States_Table)
+        print('\nNumber of Cycles:', total_time/(t1+t2) , '\n')
+        
         if plot==False:
-            return sol,solt
+            return full_feature,full_time
         elif plot==True:
-            self.plotting(sol,solt,self.label)
-            return sol,solt
-    #------------------------------------------------------------------------------------------------------------------------------
-    def dynamic_transient_rates_reaction(self,State1=[],State2=[],t1=None,t2=None,plot=False): #Function used for calculating (and plotting) the dynamic transient rates of reaction
-        
-        SS_State1,State2 = self.Dynamic(State1,State2,t1)
-        
-        if t2!=None and t1!=None:
-            self.Ti =t1
-            self.Tf = t1+t2
-            self.set_rxnconditions(Pr=State2)
-            sol,solt = self.solve_rate_reaction(initial_coverage=SS_State1)
-        elif (t2!=None and t1==None) or (t1!=None and t2==None):
-            raise Exception("Either both t1 and t2 should be inputted or neither.")
-        else:
-            self.set_rxnconditions(Pr=State2)
-            sol,solt = self.solve_rate_reaction(initial_coverage=SS_State1)
-
-        self.label='rates_r'
-        if plot==False:
-            return sol,solt
-        elif plot==True:
-            self.plotting(sol,solt,self.label)
-            return sol,solt
-    #------------------------------------------------------------------------------------------------------------------------------
-    def dynamic_transient_rates_production(self,State1=[],State2=[],t1=None,t2=None,plot=False): #Function used for calculating (and plotting) the dynamic transient rates of production
-        
-        SS_State1,State2 = self.Dynamic(State1,State2,t1)
-        
-        if t2!=None and t1!=None:
-            self.Ti =t1
-            self.Tf = t1+t2
-            self.set_rxnconditions(Pr=State2)
-            sol,solt = self.solve_rate_production(initial_coverage=SS_State1)
-        elif (t2!=None and t1==None) or (t1!=None and t2==None):
-            raise Exception("Either both t1 and t2 should be inputted or neither.")
-        else:
-            self.set_rxnconditions(Pr=State2)
-            sol,solt = self.solve_rate_production(initial_coverage=SS_State1)
-
-        self.label='rates_p'
-        if plot==False:
-            return sol,solt
-        elif plot==True:
-            self.plotting(sol,solt,self.label)
-            return sol,solt
-    #------------------------------------------------------------------------------------------------------------------------------
-    #Functions to calculate the resulting kinteic parametes from pressure switching
-    #------------------------------------------------------------------------------------------------------------------------------
-    def cyclic_dynamic_transient_coverages(self,State1=[],State2=[],t1=None,t2=None,total_time=None,plot=False): #Function used for calculating (and plotting) the dynamic transient coverages
-        if total_time!=None:
-            total_time_f=0 #final full simulation time
-            self.set_rxnconditions(Pr=State1)
-            sola,solta=self.solve_coverage(t=[0,t1])#calculating first pulse (obtaining/initialising first data set for full simulation)
-            full_covg =sola #Initializing full vector of rates_r
-            full_time=solta #Intiialising full vector of times
-
-            while (total_time_f<total_time):
-
-                blockPrint() #Disable printing (since warning will show up if steady state not reached)
-                solb,soltb=self.dynamic_transient_coverages(State1,State2,t1,t2)
-                soltb = soltb-soltb[0]
-                
-                full_covg=np.vstack([full_covg,solb])
-                full_time=np.hstack([full_time,full_time[-1]+soltb])
-                
-                total_time_f=full_time[-1]
-                enablePrint() #re-enabling printing
-                
-            self.label='coverages'
-            if plot==False:
-                return full_covg,full_time
-            elif plot==True:
-                self.plotting(full_covg,full_time,self.label)
-                return full_covg,full_time
-    #------------------------------------------------------------------------------------------------------------------------------        
-    def cyclic_dynamic_transient_rates_reaction(self,State1=[],State2=[],t1=None,t2=None,total_time=None,plot=False): #Function used for calculating (and plotting) the dynamic transient coverages
-        if total_time!=None:
-            total_time_f=0 #final full simulation time
-            self.set_rxnconditions(Pr=State1)
-            sola,solta=self.solve_rate_reaction(tf=t1)#calculating first pulse (obtaining/initialising first data set for full simulation)
-            full_rt_r =sola #Initializing full vector of rates_p
-            full_time=solta #Intiialising full vector of times
-
-            while (total_time_f<total_time):
-
-                blockPrint() #Disable printing (since warning will show up if steady state not reached)
-                solb,soltb=self.dynamic_transient_rates_reaction(State1,State2,t1,t2)
-                soltb = soltb-soltb[0]
-                
-                full_rt_r=np.vstack([full_rt_r,solb])
-                full_time=np.hstack([full_time,full_time[-1]+soltb])
-                
-                total_time_f=full_time[-1]
-                enablePrint() #re-enabling printing
-                
-            self.label='rates_r'
-            if plot==False:
-                return full_rt_r,full_time
-            elif plot==True:
-                self.plotting(full_rt_r,full_time,self.label)
-                return full_rt_r,full_time
-    #------------------------------------------------------------------------------------------------------------------------------        
-    def cyclic_dynamic_transient_rates_production(self,State1=[],State2=[],t1=None,t2=None,total_time=None,plot=False): #Function used for calculating (and plotting) the dynamic transient coverages
-        if total_time!=None:
-            total_time_f=0 #final full simulation time
-            self.set_rxnconditions(Pr=State1)
-            sola,solta=self.solve_rate_production(tf=t1)#calculating first pulse (obtaining/initialising first data set for full simulation)
-            full_rt_p =sola #Initializing full vector of coverages
-            full_time=solta #Intiialising full vector of times
-
-            while (total_time_f<total_time):
-
-                blockPrint() #Disable printing (since warning will show up if steady state not reached)
-                solb,soltb=self.dynamic_transient_rates_production(State1,State2,t1,t2)
-                soltb = soltb-soltb[0]
-                
-                full_rt_p=np.vstack([full_rt_p,solb])
-                full_time=np.hstack([full_time,full_time[-1]+soltb])
-                
-                total_time_f=full_time[-1]
-                enablePrint() #re-enabling printing
-                
-            self.label='rates_p'
-            if plot==False:
-                return full_rt_p,full_time
-            elif plot==True:
-                self.plotting(full_rt_p,full_time,self.label)
-                return full_rt_p,full_time
+            self.label = label
+            self.plotting(full_feature,full_time,self.label)
+            return full_feature,full_time
     #------------------------------------------------------------------------------------------------------------------------------
     def create_csv(self,sol=[],solt=[],k_inp=[],Name=None,label=None):
         
@@ -1710,6 +1635,7 @@ class ML_Fitting:
         #Checking to see match
         ## Copying all the other input files into the different simulation folders
         # Extracting initial coverages
+        #TO BE SET AS INPUTS
         #Remember: A='CO*'; B='O*'
         n_points = 500 #From KMC simulation 
         n_gas_species = 3 #From KMC simulation
