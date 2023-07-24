@@ -38,9 +38,13 @@ class MKModel:
         self.P,self.Temp = self.set_rxnconditions() #Setting reaction conditions (defaulted to values from the Param File but can also be set mannually )
         self.rate_const_correction = 'None' #Accounting for correction to the rate constants (i.e. enhancing the mean field approximation)
         self.BG_matrix='uniform' #Bragg williams constant matrix
+        self.Coeff = self.Coeff_extract() #Extracting the coverage dependance coefficients
         self.Ti,self.Tf=self.set_limits_of_integration() #Sets the range of time needed to solve for the relavant MK ODEs, defaults to 0-6e6 but can also be manually set
         self.init_cov=self.set_initial_coverages() #Sets the initial coverage of the surface species, defaults to zero coverage but can also be set manually
         
+        self.thermo_constraint = 'pseudo'#Sets the Keq to be calculated straight from the rate constants
+        self.Keq = self.set_Keq() #Checks thermodynamic consistency
+
         self.status='Waiting' #Used to observe the status of the ODE Convergence
         self.label='None'   #Used to pass in a label so as to know what kind of figure to plot    
     #------------------------------------------------------------------------------------------------------------------------------    
@@ -78,6 +82,27 @@ class MKModel:
             elif (i == len(Stoich)-1 and err==0):
                 text = "Mass is conserved."
                 return print(text,'\n')
+    #------------------------------------------------------------------------------------------------------------------------------    
+    def check_thermo(self, thermo_constraint = None): #Function to check if mass is balance
+        if thermo_constraint!=None:
+            self.thermo_constraint = thermo_constraint
+        
+        kf = self.k[0::2] #Pulling out the forward rxn rate constants (::2 means every other value, skip by a step of 2)
+        kr = self.k[1::2] #Pulling out the reverse rxn rate constants 
+        Keq_k = 1
+        for i in np.arange(len(kf)):
+            Keq_k = Keq_k* (kf[i]/kr[i])
+
+        if self.thermo_constraint == 'pseudo':
+            self.Keq = Keq_k
+            print('Thermodynamically constrained (with pseudo Keq)')
+        
+        elif self.thermo_constraint == 'true':
+            if np.isclose(self.Keq,Keq_k,atol=1e-1) == True:
+                print('Thermodynamically constrained')
+            elif np.isclose(self.Keq,Keq_k,atol=1e-1) == False:
+                raise Exception('NOT Thermodynamically constrained')
+            
     #------------------------------------------------------------------------------------------------------------------------------        
     def check_coverages(self,vec):  #Function to check if the coverages being inputted make sense (Note in this code empty sites are not inputted, they're calculated automatically)
         if (np.round(float(np.sum(vec)),0))!=1 or (all(x >= 0 for x in vec)!=True) or (all(x <= 1 for x in vec)!=True):
@@ -142,7 +167,29 @@ class MKModel:
 
         self.Coeff = Coeff   #Object to be used for rate determiniing and covg dependent rate coeff.     
         return Coeff
-   #------------------------------------------------------------------------------------------------------------------------------
+    #------------------------------------------------------------------------------------------------------------------------------
+    def set_Keq(self,Keq = [], thermo_constraint = None):
+        if thermo_constraint!=None:
+            self.thermo_constraint = thermo_constraint
+
+        kf = self.k[0::2] #Pulling out the forward rxn rate constants (::2 means every other value, skip by a step of 2)
+        kr = self.k[1::2] #Pulling out the reverse rxn rate constants 
+        Keq_k = 1
+        for i in np.arange(len(kf)):
+            Keq_k = Keq_k* (kf[i]/kr[i]) #Calculating overal reaction equilibrium constant from k (rate constants)
+
+        if self.thermo_constraint == 'pseudo':
+            self.Keq = Keq_k
+            self.check_thermo()
+            return self.Keq 
+        elif self.thermo_constraint == 'true':
+            if Keq != [] :
+                self.Keq = Keq
+                self.check_thermo()
+                return self.Keq
+            elif Keq == []:
+                raise Exception("Need to enter the actual overall reaction Equilibrium constant")
+    #------------------------------------------------------------------------------------------------------------------------------
     def set_initial_coverages(self,init=[]): #empty sites included at the end of the code 
         mp.dps= self.dplace
         
@@ -192,15 +239,15 @@ class MKModel:
     def ratecoeff(self,kref,Coeff,Theta):
         import scipy.special as sp
         if self.rate_const_correction=='None':
-            K = kref
-            return K
+            k = kref
+            return k
         elif self.rate_const_correction=='Forced_exp_CD': #Forced exponential coverage dependance
             if len(Coeff) != len(Theta):
                 raise Exception('The number of the coefficients doesnt match the relevant coverages. Please make sure to check the Parameters csv file for any errors. ')
             else:
                 correction = np.exp(float(np.dot(Theta,Coeff)))
-                K = kref*correction
-                return K
+                k = kref*correction
+                return k
     #------------------------------------------------------------------------------------------------------------------------------
     def get_rates(self,cov=[]): #cov = coverages  #Function used to calculate the rates of reactions
         
@@ -222,9 +269,10 @@ class MKModel:
         Coeff_r = self.Coeff[1::2] #Pulling out the reverse coefficients
 
         r = [None] * Nr  #Empty Vector for holding rate of a specific reaction
-        
+        Prod_N_1  = 1
+
         #Calculating the rates of reactions:
-        for j in np.arange(Nr):   #Looping through the reactions
+        for j in np.arange(Nr):   #Looping through the reactions (except for the last one - for thermo consistency purposes)
             matr = np.concatenate((self.P,THETA),axis=0)  #concatenating into the matrix, matr
             Ns = len(matr) #Number of species *****
             fwd = []
@@ -236,10 +284,15 @@ class MKModel:
                     
                 elif self.Stoich.iloc[j,i+1]>0: #extracting only reverse relevant rate parameters  #reverse rxn reactants /encounter probability
                     rvs.append(matr[i]**abs(self.Stoich.iloc[j,i+1]))   
-                    
-            
-            r[j] = (self.ratecoeff(kf[j],Coeff_f[j][:],THETA[:])*np.prod(fwd)) - (self.ratecoeff(kr[j],Coeff_r[j][:],THETA[:])*np.prod(rvs)) #Calculating the rate of reaction
-         
+            if j!=Nr-1:        
+                rate_coeff_forward = self.ratecoeff(kf[j],Coeff_f[j][:],THETA[:])
+                rate_coeff_reverse = self.ratecoeff(kr[j],Coeff_r[j][:],THETA[:])
+                r[j] = (rate_coeff_forward*np.prod(fwd)) - (rate_coeff_reverse*np.prod(rvs)) #Calculating the rate of reaction
+                Prod_N_1 = Prod_N_1 *(rate_coeff_forward/rate_coeff_reverse)
+            else: #To establish thermo equilibrium constraint in rate calculations
+                rate_coeff_forward = self.ratecoeff(kf[j],Coeff_f[j][:],THETA[:])
+                rate_coeff_reverse = (Prod_N_1*rate_coeff_forward)/(self.Keq) #Calculating the last rate constant as a result of thermal equilibrium
+                r[j] = (rate_coeff_forward*np.prod(fwd)) - (rate_coeff_reverse*np.prod(rvs))
         r = np.transpose(r)
         
         return r  
@@ -306,7 +359,6 @@ class MKModel:
         self.label='coverages'
         
         # Plotting
-        
         if plot==False:
             return sol,solt
         elif plot==True:
@@ -499,7 +551,6 @@ class MKModel:
             Initial_Covg = self.init_cov
 
         while (total_time_f<total_time):
-            blockPrint() #Disable printing (since warning will show up if steady state not reached)
 
             #Setting the pressures and automatically switching states
             if current_state == "State 1":
@@ -526,14 +577,15 @@ class MKModel:
             new_ti = soltb[-1]
             new_tf = new_ti+t2
 
+            blockPrint() #Disable printing (since warning will show up if steady state not reached)
             Initial_Covg = self.get_SS_coverages()
+            enablePrint()
 
             full_feature = pd.concat([full_feature,pd.DataFrame(solb)], axis=0)
             full_time=np.hstack([full_time,full_time[-1]+soltb])
             
             total_time_f=full_time[-1]
-
-            enablePrint() #re-enabling printing
+            
 
         full_feature = full_feature.to_numpy()
         full_time = full_time[1:]
@@ -552,7 +604,7 @@ class MKModel:
         States_Table[States[0]+',P[bar]'] = pd.DataFrame([np.format_float_scientific(i, exp_digits=2) for i in State1])
         States_Table[States[1]+',P[bar]'] = pd.DataFrame([np.format_float_scientific(i, exp_digits=2) for i in State2])
 
-        enablePrint()
+        
         print(States_Table.to_markdown())
         print('\nTime in State 1:',  '%e' % t1, 's')
         print('Time in State 2:', '%e' % t2, 's')
@@ -627,7 +679,6 @@ class MKModel:
     #Function responsible for plotting
     #------------------------------------------------------------------------------------------------------------------------------    
     def plotting(self,sol,solt,label):
-        
         fig = plt.figure()
         ax = fig.add_subplot(111)
 
@@ -667,7 +718,7 @@ class Fitting:
         self.rate_const_correction = 'None' #Accounting for correction to the rate constants (i.e. enhancing the mean field approximation)
         self.MKM.rate_const_correction = self.rate_const_correction
         self.MKM.k = self.k
-        self.Input_Type = Input_Type
+        self.Input_Type = Input_Type #To Know what type of data is being used to perform fitting
         self.BG_matrix='auto' #Bragg williams constant matrix
         self.Coeff = self.Coeff_extract() #Extracting the coverage dependance coefficients
         self.init_cov=self.set_initial_coverages() #Sets the initial coverage of the surface species, defaults to zero coverage but can also be set manually
@@ -835,7 +886,6 @@ class Fitting:
                 blockPrint()
                 return 
 
-        enablePrint()
     #------------------------------------------------------------------------------------------------------------------------------    
     def normalize(self,Ext_inp=[]):  #Note: Input and output both include time vector
         if Ext_inp==[]:

@@ -38,6 +38,8 @@ class MKModel:
         self.P,self.Temp = self.set_rxnconditions() #Setting reaction conditions (defaulted to values from the Param File but can also be set mannually )
         self.rate_const_correction = 'None' #Accounting for correction to the rate constants (i.e. enhancing the mean field approximation)
         self.BG_matrix='uniform' #Bragg williams constant matrix
+        self.Coeff = self.Coeff_extract()
+
         self.Ti,self.Tf=self.set_limits_of_integration() #Sets the range of time needed to solve for the relavant MK ODEs, defaults to 0-6e6 but can also be manually set
         self.init_cov=self.set_initial_coverages() #Sets the initial coverage of the surface species, defaults to zero coverage but can also be set manually
         
@@ -546,13 +548,15 @@ class MKModel:
         elif self.label == 'rates_r':
             title = 'Rates of reaction'
 
+        enablePrint()
+
         print('\nPeriodic Simulation of',title,'\n' )
 
         States_Table = pd.concat([States_Table,pd.DataFrame(self.Atomic.columns.values[1:])[:len(self.P)]], axis=0)
         States_Table[States[0]+',P[bar]'] = pd.DataFrame([np.format_float_scientific(i, exp_digits=2) for i in State1])
         States_Table[States[1]+',P[bar]'] = pd.DataFrame([np.format_float_scientific(i, exp_digits=2) for i in State2])
 
-        enablePrint()
+        
         print(States_Table.to_markdown())
         print('\nTime in State 1:',  '%e' % t1, 's')
         print('Time in State 2:', '%e' % t2, 's')
