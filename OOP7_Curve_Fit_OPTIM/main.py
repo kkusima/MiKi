@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt         #package for plotting
 from scipy.integrate import solve_ivp   #ODE solver
 from scipy import optimize
 from scipy.special import logsumexp
+from scipy.linalg import null_space
 from numdifftools import Jacobian, Hessian
 from autograd import jacobian, hessian
 import lmfit
@@ -36,6 +37,7 @@ class MKModel:
 
         self.k = self.kextract()    #Extracting the rate constants from the Param File (Note that format of the Param File is crucial)
         self.P,self.Temp = self.set_rxnconditions() #Setting reaction conditions (defaulted to values from the Param File but can also be set mannually )
+        self.Stoichiometric_numbers = self.Stoich_number_extract()
         self.rate_const_correction = 'None' #Accounting for correction to the rate constants (i.e. enhancing the mean field approximation)
         self.BG_matrix='uniform' #Bragg williams constant matrix
         self.Coeff = self.Coeff_extract() #Extracting the coverage dependance coefficients
@@ -71,7 +73,7 @@ class MKModel:
     #------------------------------------------------------------------------------------------------------------------------------    
     def check_massbalance(self,Atomic,Stoich): #Function to check if mass is balanced
         at_mat = Atomic.iloc[0:,1:]           #The atomic matrix
-        err = 0                               #For counting error
+        err = 0                               #For counting where the error occurs
         for i in np.arange(len(Stoich)):    
             st_mat = Stoich.iloc[i,1:]        #The stoichiometric matrix
             res = np.dot(at_mat,st_mat)       #Performing the matrix product for every reaction i
@@ -86,12 +88,14 @@ class MKModel:
     def check_thermo(self, thermo_constraint = None): #Function to check if mass is balance
         if thermo_constraint!=None:
             self.thermo_constraint = thermo_constraint
-        
+
+        St_No = self.Stoichiometric_numbers #Stoichiometric numbers for each elementary step 
+
         kf = self.k[0::2] #Pulling out the forward rxn rate constants (::2 means every other value, skip by a step of 2)
         kr = self.k[1::2] #Pulling out the reverse rxn rate constants 
-        Keq_k = 1
+        Keq_k = 1  #Counter to be used when generating products of elementary step equilibrium constants
         for i in np.arange(len(kf)):
-            Keq_k = Keq_k* (kf[i]/kr[i])
+            Keq_k = Keq_k * ((kf[i]/kr[i]) ** float(St_No[i]))
 
         if self.thermo_constraint == 'pseudo':
             self.Keq = Keq_k
@@ -168,15 +172,40 @@ class MKModel:
         self.Coeff = Coeff   #Object to be used for rate determiniing and covg dependent rate coeff.     
         return Coeff
     #------------------------------------------------------------------------------------------------------------------------------
+    def Stoich_number_extract(self):
+        #Check for dependency i.e parallel reactions
+        Stoich = self.Stoich.to_numpy()[:,1:].astype(float) # The full stoichiometric matrix as an array
+        no_gas_species = np.shape(Stoich)[1] - len(self.P) #no_gas species to be used to isolate the adsorbates in the stoich matrix
+        Stoich_adsorbate_matrix = Stoich[:,no_gas_species:].T #Transposed adsorbate matrix to be used to find the null space and hence the stoichiometric numbers of all the elementary steps
+        
+        rank = np.linalg.matrix_rank(Stoich) #rank used to check if the reaction network has linearly independent steps (i.e no parallel reactions)
+        # Perform SVD on the stoich matrix to allow for checking of linear dependency
+        tolerance = 1e-10
+        _, singular_values, _ = np.linalg.svd(Stoich)
+        # Set a threshold for identifying zero singular values
+        threshold = tolerance * max(Stoich.shape) * singular_values[0]
+        # Find the dependent rows based on singular values
+        dependent_rows = [i for i, s in enumerate(singular_values) if abs(s) < threshold]
+        # Check if the matrix is linearly independent
+        if rank != min(Stoich.shape):
+            print("WARNING: The stoichiometric matrix is Linearly Dependent.\n The following steps have parallel reactions:\n",dependent_rows,"\n These should be ignored when fitting  ")
+
+        matrix = np.max(np.abs(null_space(Stoich_adsorbate_matrix))) #Maximum value to be used to provide scaled stoichiometric numbers from the null space
+        sigma_matrix = np.abs(null_space(Stoich_adsorbate_matrix))/matrix #The final stoichiometric number matrix
+
+        return sigma_matrix
+    #------------------------------------------------------------------------------------------------------------------------------
     def set_Keq(self,Keq = [], thermo_constraint = None):
         if thermo_constraint!=None:
             self.thermo_constraint = thermo_constraint
 
+        St_No = self.Stoichiometric_numbers #Stoichiometric numbers for each elementary step 
+
         kf = self.k[0::2] #Pulling out the forward rxn rate constants (::2 means every other value, skip by a step of 2)
         kr = self.k[1::2] #Pulling out the reverse rxn rate constants 
-        Keq_k = 1
+        Keq_k = 1  #Counter to be used when generating products of elementary step equilibrium constants
         for i in np.arange(len(kf)):
-            Keq_k = Keq_k* (kf[i]/kr[i]) #Calculating overal reaction equilibrium constant from k (rate constants)
+            Keq_k = Keq_k * ((kf[i]/kr[i]) ** float(St_No[i])) #Calculating overal reaction equilibrium constant from k (rate constants)
 
         if self.thermo_constraint == 'pseudo':
             self.Keq = Keq_k
@@ -269,7 +298,9 @@ class MKModel:
         Coeff_r = self.Coeff[1::2] #Pulling out the reverse coefficients
 
         r = [None] * Nr  #Empty Vector for holding rate of a specific reaction
-        Prod_N_1  = 1
+        Prod_N_1  = 1  #Counter to be used when generating products of elementary step equilibrium constants
+
+        St_No = self.Stoichiometric_numbers #Stoichiometric numbers for each elementary step 
 
         #Calculating the rates of reactions:
         for j in np.arange(Nr):   #Looping through the reactions (except for the last one - for thermo consistency purposes)
@@ -285,13 +316,13 @@ class MKModel:
                 elif self.Stoich.iloc[j,i+1]>0: #extracting only reverse relevant rate parameters  #reverse rxn reactants /encounter probability
                     rvs.append(matr[i]**abs(self.Stoich.iloc[j,i+1]))   
             if j!=Nr-1:        
-                rate_coeff_forward = self.ratecoeff(kf[j],Coeff_f[j][:],THETA[:]) #Calculating forward rate coefficients
-                rate_coeff_reverse = self.ratecoeff(kr[j],Coeff_r[j][:],THETA[:]) #Calculating reverse rate coefficients
+                rate_coeff_forward = float(self.ratecoeff(kf[j],Coeff_f[j][:],THETA[:])) ** float(St_No[j]) #Calculating forward rate coefficients
+                rate_coeff_reverse = float(self.ratecoeff(kr[j],Coeff_r[j][:],THETA[:])) ** float(St_No[j]) #Calculating reverse rate coefficients
                 r[j] = (rate_coeff_forward*np.prod(fwd)) - (rate_coeff_reverse*np.prod(rvs)) #Calculating the rate of reaction
                 Prod_N_1 = Prod_N_1 *(rate_coeff_forward/rate_coeff_reverse)
             else: #To establish thermo equilibrium constraint in rate calculations
-                rate_coeff_forward = self.ratecoeff(kf[j],Coeff_f[j][:],THETA[:]) #Calculating forward rate coefficient for the last step
-                rate_coeff_reverse = (Prod_N_1*rate_coeff_forward)/(self.Keq) #Calculating the last reverse rate coefficient as a result of thermal equilibrium
+                rate_coeff_forward = float(self.ratecoeff(kf[j],Coeff_f[j][:],THETA[:])) ** float(St_No[j]) #Calculating forward rate coefficient for the last step
+                rate_coeff_reverse = float((Prod_N_1*rate_coeff_forward)/(self.Keq))** float(1/St_No[j]) #Calculating the last reverse rate coefficient as a result of thermal equilibrium
                 r[j] = (rate_coeff_forward*np.prod(fwd)) - (rate_coeff_reverse*np.prod(rvs))
         r = np.transpose(r)
         
