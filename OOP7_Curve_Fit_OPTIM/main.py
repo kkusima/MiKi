@@ -285,13 +285,13 @@ class MKModel:
                 elif self.Stoich.iloc[j,i+1]>0: #extracting only reverse relevant rate parameters  #reverse rxn reactants /encounter probability
                     rvs.append(matr[i]**abs(self.Stoich.iloc[j,i+1]))   
             if j!=Nr-1:        
-                rate_coeff_forward = self.ratecoeff(kf[j],Coeff_f[j][:],THETA[:])
-                rate_coeff_reverse = self.ratecoeff(kr[j],Coeff_r[j][:],THETA[:])
+                rate_coeff_forward = self.ratecoeff(kf[j],Coeff_f[j][:],THETA[:]) #Calculating forward rate coefficients
+                rate_coeff_reverse = self.ratecoeff(kr[j],Coeff_r[j][:],THETA[:]) #Calculating reverse rate coefficients
                 r[j] = (rate_coeff_forward*np.prod(fwd)) - (rate_coeff_reverse*np.prod(rvs)) #Calculating the rate of reaction
                 Prod_N_1 = Prod_N_1 *(rate_coeff_forward/rate_coeff_reverse)
             else: #To establish thermo equilibrium constraint in rate calculations
-                rate_coeff_forward = self.ratecoeff(kf[j],Coeff_f[j][:],THETA[:])
-                rate_coeff_reverse = (Prod_N_1*rate_coeff_forward)/(self.Keq) #Calculating the last rate constant as a result of thermal equilibrium
+                rate_coeff_forward = self.ratecoeff(kf[j],Coeff_f[j][:],THETA[:]) #Calculating forward rate coefficient for the last step
+                rate_coeff_reverse = (Prod_N_1*rate_coeff_forward)/(self.Keq) #Calculating the last reverse rate coefficient as a result of thermal equilibrium
                 r[j] = (rate_coeff_forward*np.prod(fwd)) - (rate_coeff_reverse*np.prod(rvs))
         r = np.transpose(r)
         
