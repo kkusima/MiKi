@@ -315,15 +315,15 @@ class MKModel:
                     
                 elif self.Stoich.iloc[j,i+1]>0: #extracting only reverse relevant rate parameters  #reverse rxn reactants /encounter probability
                     rvs.append(matr[i]**abs(self.Stoich.iloc[j,i+1]))   
-            if j!=Nr-1:    
-                rate_coeff_forward = float(self.ratecoeff(kf[j],Coeff_f[j][:],THETA[:])) #Calculating forward rate coefficients
-                rate_coeff_reverse = float(self.ratecoeff(kr[j],Coeff_r[j][:],THETA[:])) #Calculating reverse rate coefficients
-                r[j] = (rate_coeff_forward*np.prod(fwd)) - (rate_coeff_reverse*np.prod(rvs)) #Calculating the rate of reaction
-                Prod_N_1 = Prod_N_1 *((rate_coeff_forward/rate_coeff_reverse) ** float(St_No[j]))
+            if j!=Nr-1:    #For calculating nonTCRC rate coefficients and corresponding rxn rates
+                rate_coeff_forward_i = float(self.ratecoeff(kf[j],Coeff_f[j][:],THETA[:])) #Calculating forward rate coefficients
+                rate_coeff_reverse_i = float(self.ratecoeff(kr[j],Coeff_r[j][:],THETA[:])) #Calculating reverse rate coefficients
+                r[j] = (rate_coeff_forward_i*np.prod(fwd)) - (rate_coeff_reverse_i*np.prod(rvs)) #Calculating the rate of reaction
+                Prod_N_1 = Prod_N_1 *((rate_coeff_forward_i/rate_coeff_reverse_i) ** float(St_No[j])) #To be used to calculate TCRC
             else: #To establish thermo equilibrium constraint in rate calculations
-                rate_coeff_forward = float(self.ratecoeff(kf[j],Coeff_f[j][:],THETA[:]))  #Calculating forward rate coefficient for the last step
-                rate_coeff_reverse = float(( Prod_N_1 * (rate_coeff_forward ** float(St_No[j])) ) /(self.Keq))** float(1/St_No[j]) #Calculating the last reverse rate coefficient as a result of thermal equilibrium
-                r[j] = (rate_coeff_forward*np.prod(fwd)) - (rate_coeff_reverse*np.prod(rvs))
+                rate_coeff_forward_n = float(self.ratecoeff(kf[j],Coeff_f[j][:],THETA[:]))  #Calculating forward rate coefficient for the last step
+                rate_coeff_reverse_n = float(( Prod_N_1 * (rate_coeff_forward_n ** float(St_No[j])) ) /(self.Keq))** float(1/St_No[j]) #Calculating the last reverse rate coefficient as a result of thermal equilibrium
+                r[j] = (rate_coeff_forward_n*np.prod(fwd)) - (rate_coeff_reverse_n*np.prod(rvs))
         r = np.transpose(r)
         
         return r  
@@ -758,7 +758,6 @@ class Fitting:
         self.status='Waiting' #Used to observe the status of the ODE Convergence
         self.label='None'   #Used to pass in a label so as to know what kind of figure to plot
         #Output: self.fitted_k  #Can be used to extracted an array of final fitted rate parameters
-
         if self.Input_Type not in ['iCovg','iCovg_iRates']:
             raise Exception('Input type specified is not recognised.\n Please make sure your input type is among that which is acceptable')
     #------------------------------------------------------------------------------------------------------------------------------   
@@ -954,6 +953,26 @@ class Fitting:
             Denorm_inp[:,i]=(norm_inp[:,i]*(ma-mi)) + mi
         return Denorm_inp
     #------------------------------------------------------------------------------------------------------------------------------    
+    def TCRC_Enforcement(self,k=[]): #Function to calculate Thermodynamicaly Constrained Rate Coefficient and append to rate constant
+        #The k represents all the rate constants in order of the reaction mechanism, excluding the last rate coefficient being calculated
+        ###################### Thermodynamic constraint
+        St_No = self.MKM.Stoichiometric_numbers
+        Prod_N_1 = 1
+        k = np.append(k,1.0) #Adding one number so that even rate coefficient
+        kef = k
+        kf = kef[0::2] #Pulling out the forward rxn rate constants (::2 means every other value, skip by a step of 2)
+        kr = kef[1::2] #Pulling out the reverse rxn rate constants (::2 means every other value, skip by a step of 2)
+
+        for i in np.arange(len(kf)-1):
+                    Prod_N_1 = Prod_N_1 * ((kf[i]/kr[i]) ** float(St_No[i]))
+                
+        rate_coeff_forward = k[-2]  #Calculating forward rate coefficient for the last step
+        rate_coeff_reverse = float(( Prod_N_1 * (rate_coeff_forward ** float(St_No[-1])) ) /(self.MKM.Keq))** float(1/St_No[-1]) #Calculating the last reverse rate coefficient as a result of thermal equilibrium
+
+        k[-1] = rate_coeff_reverse
+        ######################
+        return k
+    #------------------------------------------------------------------------------------------------------------------------------    
     # Cost/Minimization Functions
     #------------------------------------------------------------------------------------------------------------------------------    
     # Rate_functions that generates combination of constrained coverages _ to be mininimized to obtain rate parameters using a curvefit method
@@ -975,31 +994,24 @@ class Fitting:
         return np.reshape(soldat[:,1:],soldat[:,1:].size)
     #------------------------------------------------------------------------------------------------------------------------------    
     def rate_func_iCovg_iRates(self,x,*fit_params): #cost function for non-dynamic kmc #covg and instantaneous gasseous rates of prod
-        # if mask== 'ON':
-        #     if mask!=-1:
-        #         fit_param[1] =  
 
-        fit_params_array = np.array(fit_params)
+        # fit_params_array = np.array(fit_params)
+        IGS = self.IGS[:-1] #Removing one to allow for TCRC
+        masking_vec = self.masking_vec
+        indices = [x - 1 for x in masking_vec]
+        repl = fit_params
+        for index, replacement in zip(indices, repl):
+                IGS[index] = replacement
+        
+        full_param_array = IGS
+
+        ###################### Enforcing Thermodynamic constraint
+        full_param_array = self.TCRC_Enforcement(k = full_param_array)
+        ######################
+        self.MKM.k = full_param_array       
+                
         Ncs = len(self.Stoich.iloc[0,:])-len(self.Pextract())-1 #No. of Surface species
         Ngs = len(self.MKM.Pextract()) #No. of gaseous species
-
-        ###################### Thermodynamic constraint
-        St_No = self.MKM.Stoichiometric_numbers
-        Prod_N_1 = 1
-        fit_params_array = np.append(fit_params_array,1.0) #Adding one number so that even rate coefficient
-        kef = fit_params_array
-        kf = kef[0::2] #Pulling out the forward rxn rate constants (::2 means every other value, skip by a step of 2)
-        kr = kef[1::2] #Pulling out the reverse rxn rate constants (::2 means every other value, skip by a step of 2)
-
-        for i in np.arange(len(kf)-1):
-                    Prod_N_1 = Prod_N_1 * ((kf[i]/kr[i]) ** float(St_No[i]))
-                
-        rate_coeff_forward = fit_params_array[-2]  #Calculating forward rate coefficient for the last step
-        rate_coeff_reverse = float(( Prod_N_1 * (rate_coeff_forward ** float(St_No[-1])) ) /(self.MKM.Keq))** float(1/St_No[-1]) #Calculating the last reverse rate coefficient as a result of thermal equilibrium
-
-        fit_params_array[-1] = rate_coeff_reverse
-        ######################
-        self.MKM.k = fit_params_array       
 
         input_time,input_covg,input_rate = self.extract() #Input time used for setting limits of integration; Input covg used to set initial condition for numerical differentiaiton
         inp_init_covg = input_covg[0,:]  #Used to make sure the intial coverages match the input
@@ -1114,10 +1126,21 @@ class Fitting:
             y_values_gratep = np.reshape(ratep_values,ratep_values.size) # Input Dependent variable(s) (eg. KMC rates_p)
 
             y_values = np.concatenate((y_values_covg,y_values_gratep)) #Including the instantaneous rates of productions to be compared with/error minimized
+        
+        IGS = self.IGS #initial guess
+        masking_vec = self.masking_vec #masking vec
+        indexes = masking_vec #Indexes to be masked (From the user)
+        indexes = [x - 1 for x in indexes] #Indexes scaled to start from 0 to match what python understands
+        arr = IGS #Initial guess constants
+        ##Using boolean operation to mask the indices/rate constants selected  form being fit
+        mask = np.ones(arr.size, dtype=bool)
+        mask[indexes] = False
+        initial_vals = arr[mask] #Reduced parameters to be fitted
 
-        initial_vals = np.array(self.k)[:-1]
 
-        if method=='lm':
+        # initial_vals = np.array(self.k)[:-1] #Removing the last rate reaction reverse rate constant as that will be calculated from thermodynamic constraint
+
+        if method=='lm': #For the levenberg-Marquardt method
             bnds = (0,inf)
             maxfev= 1000
             xtol=1e-10
@@ -1133,25 +1156,18 @@ class Fitting:
         params, params_covariance = optimize.curve_fit(cost_function, x_values, y_values
                                                     ,method =method, bounds=bnds, maxfev=maxfev, xtol=xtol, ftol=ftol
                                                     ,p0=initial_vals)
+        params = np.array(params)
+        IGS = self.IGS[:-1] #Removing one to allow for TCRC
+        masking_vec = self.masking_vec
+        indices = [x - 1 for x in masking_vec]
+        repl = params
+        for index, replacement in zip(indices, repl):
+                IGS[index] = replacement
+        params = IGS
         #Calculating last rate constant (TCRC)
-        ###################### Thermodynamic constraint
-        St_No = self.MKM.Stoichiometric_numbers
-        Prod_N_1 = 1
-
-        params = np.append(params,1.0) #Adding one number so that even rate coefficient
-        kef = params
-        kf = kef[0::2] #Pulling out the forward rxn rate constants (::2 means every other value, skip by a step of 2)
-        kr = kef[1::2] #Pulling out the reverse rxn rate constants (::2 means every other value, skip by a step of 2)
-
-        for i in np.arange(len(kf)-1):
-                    Prod_N_1 = Prod_N_1 * ((kf[i]/kr[i]) ** float(St_No[i]))
-                
-        rate_coeff_forward = params[-2]  #Calculating forward rate coefficient for the last step
-        rate_coeff_reverse = float(( Prod_N_1 * (rate_coeff_forward ** float(St_No[-1])) ) /(self.MKM.Keq))** float(1/St_No[-1]) #Calculating the last reverse rate coefficient as a result of thermal equilibrium
-
-        params[-1] = rate_coeff_reverse
+        ###################### Enforcing Thermodynamic constraint
+        params = self.TCRC_Enforcement(k = params)
         ######################
-
 
         return params, params_covariance
     #------------------------------------------------------------------------------------------------------------------------------ 
@@ -1522,10 +1538,44 @@ class Fitting:
         
         return fit_params    
     #------------------------------------------------------------------------------------------------------------------------------
-    def fitting_rate_param(self,option='cf',plot=False,plot_norm=False,method_cf='trf',method_min='L-BFGS-B',mdl='MLPRegressor'
+    def fitting_rate_param(self,IGS = [], mask = 'OFF', masking_vec=[], option='cf',plot=False,plot_norm=False,method_cf='trf',method_min='L-BFGS-B',mdl='MLPRegressor'
                            ,maxfev=1e5,xatol=1e-4,fatol=1e-4,adaptive=False,tol = 1e-8,xtol=1e-8,ftol=1e-8,gtol=1e-8,maxfun=1e6,maxiter=1e5,weight=1e0,n=40,filename='ML_dataset.xlsx'):
         #n is the number of rows worth of ML data, if it is changed and the present data has different rows, a new dataset will be generated with n rows 
-        
+        no_ks = 2* self.MKM.Stoich.shape[0]
+        #Initial Guess: IGS
+        if IGS == []:
+            IGS = self.MKM.kextract()
+            self.k = IGS
+            self.IGS = IGS
+        else:
+            if len(IGS)== no_ks:
+                self.k = IGS
+                self.IGS = IGS
+            else:
+                raise Exception("Length of Initial Rate Constant Guess need to correspond to the total forward and reverse  based on the supplied model, i.e", no_ks)
+
+        #Rate constant fitting mask:
+        if mask=='ON':
+            if len(masking_vec)<len(IGS): #Masking vector corresponds to the rate constant numbers expected to be excluded from the fitting
+                allowed = np.arange(no_ks) #Creating array of allowed indices
+                allowed = [x + 1 for x in allowed] #Scaled to start from 1 (to match what the user would enter)
+                #Check to see if the masked indices inputed exist i.e withing allowable rate constants that can be masked
+                for value in masking_vec:
+                    if value not in allowed:
+                        raise Exception("Rate Coefficients chosen to mask don't exist")
+                    else:
+                        self.masking_vec = masking_vec
+                        #Printing which rate constants are being fit
+                        masking_vec = [x - 1 for x in masking_vec] #To much python starting 0 index
+                        arr = np.arange(no_ks)
+                        arr = np.array([x + 1 for x in arr]) #To much user expected counting from 1
+                        mask = np.ones(arr.size, dtype=bool)
+                        mask[masking_vec] = False
+                        result = arr[mask]
+                        print("\n The rate constants being fitted are:",result,'\n')
+            else:
+                raise Exception("The masking vector needs to be smaller than the number of available rate constant")
+
         colmn = len(self.Stoich.iloc[0,1:]) - len(self.P) - 1 #Number of columns (i.e no. of surface species being investigated)
         index = list(string.ascii_lowercase)[:colmn]
 
