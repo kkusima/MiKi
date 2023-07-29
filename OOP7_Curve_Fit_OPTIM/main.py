@@ -750,6 +750,8 @@ class Fitting:
         self.rate_const_correction = 'None' #Accounting for correction to the rate constants (i.e. enhancing the mean field approximation)
         self.MKM.rate_const_correction = self.rate_const_correction
         self.MKM.k = self.k
+        self.mask='OFF' #Setting if masking of fitted rate constants is on
+        self.masking_vec = []
         self.Input_Type = Input_Type #To Know what type of data is being used to perform fitting
         self.BG_matrix='auto' #Bragg williams constant matrix
         self.Coeff = self.Coeff_extract() #Extracting the coverage dependance coefficients
@@ -995,15 +997,24 @@ class Fitting:
     #------------------------------------------------------------------------------------------------------------------------------    
     def rate_func_iCovg_iRates(self,x,*fit_params): #cost function for non-dynamic kmc #covg and instantaneous gasseous rates of prod
 
-        # fit_params_array = np.array(fit_params)
-        IGS = self.IGS[:-1] #Removing one to allow for TCRC
-        masking_vec = self.masking_vec
-        indices = [x - 1 for x in masking_vec]
-        repl = fit_params
-        for index, replacement in zip(indices, repl):
-                IGS[index] = replacement
-        
-        full_param_array = IGS
+        fit_params_array = np.array(fit_params)
+        if self.mask=='ON':
+            IGS = copy.deepcopy(self.IGS[:-1]) #Removing one to allow for TCRC
+            no_ks = 2* self.MKM.Stoich.shape[0]
+            masking_vec = copy.deepcopy(self.masking_vec)
+            arr = np.arange(no_ks-1) #Array to look from (-1 since TCRC value will never explicitly be fitted)
+            masking_vec = np.array([x - 1 for x in masking_vec]) #Indexes scaled to start from 0 to match what python understands
+            mask = np.ones(arr.size, dtype=bool)
+            mask[masking_vec] = False
+            new_to_fit_indices = arr[mask]
+            indices = new_to_fit_indices
+            repl = fit_params_array
+            for index, replacement in zip(indices, repl):
+                    IGS[index] = replacement
+
+            full_param_array = IGS
+        else:
+            full_param_array = fit_params
 
         ###################### Enforcing Thermodynamic constraint
         full_param_array = self.TCRC_Enforcement(k = full_param_array)
@@ -1127,16 +1138,18 @@ class Fitting:
 
             y_values = np.concatenate((y_values_covg,y_values_gratep)) #Including the instantaneous rates of productions to be compared with/error minimized
         
-        IGS = self.IGS #initial guess
-        masking_vec = self.masking_vec #masking vec
-        indexes = masking_vec #Indexes to be masked (From the user)
-        indexes = [x - 1 for x in indexes] #Indexes scaled to start from 0 to match what python understands
-        arr = IGS #Initial guess constants
-        ##Using boolean operation to mask the indices/rate constants selected  form being fit
-        mask = np.ones(arr.size, dtype=bool)
-        mask[indexes] = False
-        initial_vals = arr[mask] #Reduced parameters to be fitted
-
+        IGS = copy.deepcopy(self.IGS[:-1]) #initial guess # [:-1] : ignoring the not-explicitly-fitted TCRC
+        if self.mask == 'ON':
+            masking_vec = copy.deepcopy(self.masking_vec) #masking vec
+            indexes = masking_vec #Indexes to be masked (From the user)
+            indexes = [x - 1 for x in indexes] #Indexes scaled to start from 0 to match what python understands
+            arr = IGS #Initial guess constants
+            ##Using boolean operation to mask the indices/rate constants selected  form being fit
+            mask = np.ones(arr.size, dtype=bool)
+            mask[indexes] = False
+            initial_vals = arr[mask] #Reduced parameters to be fitted
+        else:
+            initial_vals = IGS
 
         # initial_vals = np.array(self.k)[:-1] #Removing the last rate reaction reverse rate constant as that will be calculated from thermodynamic constraint
 
@@ -1156,14 +1169,22 @@ class Fitting:
         params, params_covariance = optimize.curve_fit(cost_function, x_values, y_values
                                                     ,method =method, bounds=bnds, maxfev=maxfev, xtol=xtol, ftol=ftol
                                                     ,p0=initial_vals)
-        params = np.array(params)
-        IGS = self.IGS[:-1] #Removing one to allow for TCRC
-        masking_vec = self.masking_vec
-        indices = [x - 1 for x in masking_vec]
-        repl = params
-        for index, replacement in zip(indices, repl):
-                IGS[index] = replacement
-        params = IGS
+        #Taking the fitted params and replacing it back into the list of all params
+        if self.mask == 'ON':
+            params = np.array(params)
+            IGS = copy.deepcopy(self.IGS[:-1]) #Removing one to allow for TCRC
+            no_ks = 2* self.MKM.Stoich.shape[0]
+            masking_vec = copy.deepcopy(self.masking_vec)
+            arr = np.arange(no_ks-1) #Array to look from (-1 since TCRC value will never explicitly be fitted)
+            masking_vec = np.array([x - 1 for x in masking_vec]) #Indexes scaled to start from 0 to match what python understands
+            mask = np.ones(arr.size, dtype=bool)
+            mask[masking_vec] = False
+            new_to_fitted_indices = arr[mask]
+            indices = new_to_fitted_indices
+            repl = params
+            for index, replacement in zip(indices, repl):
+                    IGS[index] = replacement
+            params = IGS
         #Calculating last rate constant (TCRC)
         ###################### Enforcing Thermodynamic constraint
         params = self.TCRC_Enforcement(k = params)
@@ -1541,40 +1562,55 @@ class Fitting:
     def fitting_rate_param(self,IGS = [], mask = 'OFF', masking_vec=[], option='cf',plot=False,plot_norm=False,method_cf='trf',method_min='L-BFGS-B',mdl='MLPRegressor'
                            ,maxfev=1e5,xatol=1e-4,fatol=1e-4,adaptive=False,tol = 1e-8,xtol=1e-8,ftol=1e-8,gtol=1e-8,maxfun=1e6,maxiter=1e5,weight=1e0,n=40,filename='ML_dataset.xlsx'):
         #n is the number of rows worth of ML data, if it is changed and the present data has different rows, a new dataset will be generated with n rows 
+        #masking_vec is the vector corresponding to the rate coefficients set to not being fitted. REMEMBER: list starts from 1 and the last rate constants can't be selected
         no_ks = 2* self.MKM.Stoich.shape[0]
+        self.mask = mask
         #Initial Guess: IGS
         if IGS == []:
-            IGS = self.MKM.kextract()
-            self.k = IGS
-            self.IGS = IGS
+            self.IGS = copy.deepcopy(self.MKM.kextract())
         else:
-            if len(IGS)== no_ks:
-                self.k = IGS
-                self.IGS = IGS
+            if len(IGS)== no_ks: #Therefore IGS should be inputted to with lenght matching total ks (even the unknown TCRC)
+                self.IGS = copy.deepcopy(IGS)
             else:
-                raise Exception("Length of Initial Rate Constant Guess need to correspond to the total forward and reverse  based on the supplied model, i.e", no_ks)
+                raise Exception("Length of Initial Rate Constant Guess need to correspond to the total forward and reverse based on the supplied model, i.e", no_ks)
 
         #Rate constant fitting mask:
         if mask=='ON':
-            if len(masking_vec)<len(IGS): #Masking vector corresponds to the rate constant numbers expected to be excluded from the fitting
-                allowed = np.arange(no_ks) #Creating array of allowed indices
-                allowed = [x + 1 for x in allowed] #Scaled to start from 1 (to match what the user would enter)
-                #Check to see if the masked indices inputed exist i.e withing allowable rate constants that can be masked
-                for value in masking_vec:
-                    if value not in allowed:
-                        raise Exception("Rate Coefficients chosen to mask don't exist")
-                    else:
-                        self.masking_vec = masking_vec
-                        #Printing which rate constants are being fit
-                        masking_vec = [x - 1 for x in masking_vec] #To much python starting 0 index
-                        arr = np.arange(no_ks)
-                        arr = np.array([x + 1 for x in arr]) #To much user expected counting from 1
-                        mask = np.ones(arr.size, dtype=bool)
-                        mask[masking_vec] = False
-                        result = arr[mask]
-                        print("\n The rate constants being fitted are:",result,'\n')
-            else:
-                raise Exception("The masking vector needs to be smaller than the number of available rate constant")
+            #Making sure an empty array is not imputted while mask setting is ON
+            if masking_vec==[]:
+                raise Exception("No vector was selected to be masked while mask setting is ON. Consider turning mask OFF")
+
+            #Making sure not all rate coefficients are selected
+            if masking_vec!=[]:
+                test_match = [x - 1 for x in masking_vec]
+                all_no = list(np.arange(no_ks-1))
+
+                if no_ks in masking_vec:
+                    raise Exception("The last elementary step's reverse rate coefficient number",no_ks," is fitted implicilty. Can not manually set this to be masked.")
+                
+                if test_match == all_no:
+                    raise Exception("All rate coefficients were selected to be masked. No fitting can be performed")
+            
+                if len(masking_vec)<len(IGS): #Masking vector corresponds to the rate constant numbers expected to be excluded from the fitting
+                    allowed = np.arange(no_ks-1) #Creating array of allowed indices (-1 since the TCRC value will not be fitted)
+                    allowed = [x + 1 for x in allowed] #Scaled to start from 1 (to match what the user would enter)
+                    #Check to see if the masked indices inputed exist i.e within allowable rate constants that can be masked
+                    for value in masking_vec:
+                        if value not in allowed and value!=[]:
+                            raise Exception("One or more of the rate coefficients chosen to mask doesn't exist or can't be fit")
+                        
+                    self.masking_vec = masking_vec
+                    #Printing which rate constants are being fit
+                    masking_vec = [x - 1 for x in masking_vec] #To match python starting 0 index
+                    arr = np.arange(no_ks-1) #Array to look from (-1 since TCRC value will never explicitly be fitted)
+                    arr = np.array([x + 1 for x in arr]) #To match user expected counting from 1
+                    mask = np.ones(arr.size, dtype=bool)
+                    mask[masking_vec] = False
+                    result = arr[mask]
+                    print("\nThe rate constants being fitted are:",result)
+                    print("Note: The last elementary reaction step's reverse rate coefficients is implicitly being fit as a TCRC\n")
+                else:
+                    raise Exception("The masking vector needs to be smaller than the number of available rate constant")
 
         colmn = len(self.Stoich.iloc[0,1:]) - len(self.P) - 1 #Number of columns (i.e no. of surface species being investigated)
         index = list(string.ascii_lowercase)[:colmn]
@@ -1655,9 +1691,10 @@ class Fitting:
         # covg_fit_d = denormalized_data_MKM[:,1:] #MKM fitted coverages
         enablePrint()
         
+        
         #####Printing out the INITIAL RATE COEFFICIENT GUESS
         print('\n \033[1m' + 'Initial guess: \n'+ '\033[0m')
-        print('-> Rate Constants:\n',self.k)
+        print('-> Rate Constants:\n',self.IGS)
         # if self.CovgDep==True:
         #     for i in np.arange(colmn):
         #         print('-> %s constants:\n'%(str(index[i])),self.Coeff[:,i])
@@ -1679,8 +1716,8 @@ class Fitting:
 
 
         ####Printing out the CONFIDENCE INTERVALS
-        print('\n \033[1m' + 'Confidence Intervals: \n'+ '\033[0m')
-        print('-> Rate Constants:\n',converg[0:n])
+        print('\n \033[1m' + 'Confidence Intervals of the fitted rate coefficients: \n'+ '\033[0m')
+        print(converg[0:n])
  
         self.fitted_k = params #Allowing for the fitted parameters to be extracted globally
         
