@@ -175,7 +175,7 @@ class MKModel:
     def Stoich_number_extract(self):
         #Check for dependency i.e parallel reactions
         Stoich = self.Stoich.to_numpy()[:,1:].astype(float) # The full stoichiometric matrix as an array
-        no_gas_species = np.shape(Stoich)[1] - len(self.P) #no_gas species to be used to isolate the adsorbates in the stoich matrix
+        no_gas_species = len(self.P) #no_gas species to be used to isolate the adsorbates in the stoich matrix
         Stoich_adsorbate_matrix = Stoich[:,no_gas_species:].T #Transposed adsorbate matrix to be used to find the null space and hence the stoichiometric numbers of all the elementary steps
         
         rank = np.linalg.matrix_rank(Stoich) #rank used to check if the reaction network has linearly independent steps (i.e no parallel reactions)
@@ -188,7 +188,9 @@ class MKModel:
         dependent_rows = [i for i, s in enumerate(singular_values) if abs(s) < threshold]
         # Check if the matrix is linearly independent
         if rank != min(Stoich.shape):
+            enablePrint()
             print("WARNING: The stoichiometric matrix is Linearly Dependent.\n The following steps have parallel reactions:\n",dependent_rows,"\n These should be ignored when fitting  ")
+            blockPrint()
 
         matrix = np.max(np.abs(null_space(Stoich_adsorbate_matrix))) #Maximum value to be used to provide scaled stoichiometric numbers from the null space
         sigma_matrix = np.abs(null_space(Stoich_adsorbate_matrix))/matrix #The final stoichiometric number matrix
@@ -999,7 +1001,7 @@ class Fitting:
 
         fit_params_array = np.array(fit_params)
         if self.mask=='ON':
-            IGS = copy.deepcopy(self.IGS[:-1]) #Removing one to allow for TCRC
+            IGS = copy.deepcopy(self.IGS[:-1]) #Removing one to allow for TCRC calculations later
             no_ks = 2* self.MKM.Stoich.shape[0]
             masking_vec = copy.deepcopy(self.masking_vec)
             arr = np.arange(no_ks-1) #Array to look from (-1 since TCRC value will never explicitly be fitted)
