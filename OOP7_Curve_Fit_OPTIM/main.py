@@ -555,8 +555,6 @@ class MKModel:
             raise Exception("t1, t2 must be inputted and either total_time or n_cycles should be inputed")
         if total_time!=None and n_cycles!=None:
             raise Exception(" Can not enter both total_time and n_cycles")
-        if total_time <= (t1+t2):
-            raise Exception(" Total Time needs to be greater than t1 + t2")
         if total_time==None and n_cycles!=None:
             total_time = (t1+t2)*n_cycles
 
