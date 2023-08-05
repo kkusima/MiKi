@@ -38,15 +38,11 @@ class MKModel:
         self.k = self.kextract()    #Extracting the rate constants from the Param File (Note that format of the Param File is crucial)
         self.P,self.Temp = self.set_rxnconditions() #Setting reaction conditions (defaulted to values from the Param File but can also be set mannually )
         
+        self.Thermo_Constraint='OFF'
         self.Keq_setting = 'pseudo'#Sets the Keq to be calculated straight from the rate constants
-   
-        self.Thermo_Constraint='ON'    
-        if self.Thermo_Constraint=='OFF':
-            print('\n WARNING: Thermodynamic Constraint is turned OFF.')
-        elif self.Thermo_Constraint=='ON':
-            self.Stoichiometric_numbers = self.Stoich_number_extract()
-            self.Keq = self.set_Keq() #Checks thermodynamic consistency
-            
+        self.Stoichiometric_numbers = self.Stoich_number_extract()
+        self.Keq = self.set_Keq() #Checks thermodynamic consistency        
+  
         self.rate_const_correction = 'None' #Accounting for correction to the rate constants (i.e. enhancing the mean field approximation)
         self.BG_matrix='uniform' #Bragg williams constant matrix
         self.Coeff = self.Coeff_extract() #Extracting the coverage dependance coefficients
@@ -105,7 +101,8 @@ class MKModel:
 
         if self.Keq_setting == 'pseudo':
             self.Keq = Keq_k
-            print('Thermodynamically constrained (with pseudo Keq)')
+            if self.Thermo_Constraint=='ON':
+                print('Thermodynamically constrained (with pseudo Keq)')
         
         elif self.Keq_setting == 'true':
             if np.isclose(self.Keq,Keq_k,atol=1e-1) == True:
@@ -183,29 +180,33 @@ class MKModel:
         Stoich = self.Stoich.to_numpy()[:,1:].astype(float) # The full stoichiometric matrix as an array
         no_gas_species = len(self.P) #no_gas species to be used to isolate the adsorbates in the stoich matrix
         Stoich_adsorbate_matrix = Stoich[:,no_gas_species:].T #Transposed adsorbate matrix to be used to find the null space and hence the stoichiometric numbers of all the elementary steps
-        # enablePrint()
-        # print(np.shape(Stoich)[0])
-        if self.Thermo_Constraint=='ON': #Checking if Thermodynamic Constraint flag is turned on. Thus allowing for stoich number calcs and equilibrium calcs
-            if np.shape(Stoich)[0]>=2: #Checking to see if there are more than 1 elementary reaction
-                rank = np.linalg.matrix_rank(Stoich) #rank used to check if the reaction network has linearly independent steps (i.e no parallel reactions)
-                # Perform SVD on the stoich matrix to allow for checking of linear dependency
-                tolerance = 1e-10
-                _, singular_values, _ = np.linalg.svd(Stoich)
-                # Set a threshold for identifying zero singular values
-                threshold = tolerance * max(Stoich.shape) * singular_values[0]
-                # Find the dependent rows based on singular values
-                dependent_rows = [i for i, s in enumerate(singular_values) if abs(s) < threshold]
-                # Check if the matrix is linearly independent
-                if rank != min(Stoich.shape):
-                    enablePrint()
-                    print("WARNING: The stoichiometric matrix is Linearly Dependent.\n The following steps have parallel reactions:\n",dependent_rows,"\n These should be ignored when fitting  ")
-                    blockPrint()
+        
+        # if np.shape(Stoich)[0]>=2: #Checking to see if there are more than 1 elementary reaction
+        rank = np.linalg.matrix_rank(Stoich) #rank used to check if the reaction network has linearly independent steps (i.e no parallel reactions)
+        # Perform SVD on the stoich matrix to allow for checking of linear dependency
+        tolerance = 1e-10
+        _, singular_values, _ = np.linalg.svd(Stoich)
+        # Set a threshold for identifying zero singular values
+        threshold = tolerance * max(Stoich.shape) * singular_values[0]
+        # Find the dependent rows based on singular values
+        dependent_rows = [i for i, s in enumerate(singular_values) if abs(s) < threshold]
+        # Check if the matrix is linearly independent
+        if rank != min(Stoich.shape):
+            enablePrint()
+            print("WARNING: The stoichiometric matrix is Linearly Dependent.\n The following steps have parallel reactions:\n",dependent_rows,"\n These should be ignored when fitting  ")
+            blockPrint()
+        
+        n_space = null_space(Stoich_adsorbate_matrix)
+        if len(n_space)>1:
+            matrix = np.max(np.abs(n_space)) #Maximum value to be used to provide scaled stoichiometric numbers from the null space
+            sigma = np.abs(n_space)/matrix #The final stoichiometric number matrix
+        else:
+            print('Warning: The transposed stoich-adsorbate matrix gave a trivial null space.\nThe stoichiometric numbers are now set to 1\n')
+            sigma = list(np.ones(np.shape(Stoich)[0]))
+        
+        self.Stoichiometric_numbers = sigma
 
-                matrix = np.max(np.abs(null_space(Stoich_adsorbate_matrix))) #Maximum value to be used to provide scaled stoichiometric numbers from the null space
-                sigma_matrix = np.abs(null_space(Stoich_adsorbate_matrix))/matrix #The final stoichiometric number matrix
-            else:
-                raise Exception("There is only one elementary step provided in the model and the TCRC flag is turned on")
-        return sigma_matrix
+        return sigma
     #------------------------------------------------------------------------------------------------------------------------------
     def set_Keq(self,Keq = [], Keq_setting = None):
         if Keq_setting!=None:
@@ -302,7 +303,7 @@ class MKModel:
 
         kf = self.k[0::2] #Pulling out the forward rxn rate constants (::2 means every other value, skip by a step of 2)
         kr = self.k[1::2] #Pulling out the reverse rxn rate constants 
-        
+
         ccolmn = len(self.Stoich.iloc[0,1:]) - len(self.P) #No. of columns in default coefficient matrix
         crow = len(self.k) #No. of rows in default coefficient matrix. Note, forward and reverse rxns are separate rxns
             
@@ -333,7 +334,7 @@ class MKModel:
                 r[j] = (rate_coeff_forward_i*np.prod(fwd)) - (rate_coeff_reverse_i*np.prod(rvs)) #Calculating the rate of reaction
                 if self.Thermo_Constraint=='ON':
                     Prod_N_1 = Prod_N_1 *((rate_coeff_forward_i/rate_coeff_reverse_i) ** float(St_No[j])) #To be used to calculate TCRC
-            else: #To establish thermo equilibrium constraint in rate calculations
+            elif j==Nr-1: #To establish thermo equilibrium constraint in rate calculations
                 rate_coeff_forward_n = float(self.ratecoeff(kf[j],Coeff_f[j][:],THETA[:]))  #Calculating forward rate coefficient for the last step
                 if self.Thermo_Constraint=='OFF':
                     rate_coeff_reverse_n = float(self.ratecoeff(kr[j],Coeff_r[j][:],THETA[:]))
@@ -1012,6 +1013,7 @@ class Fitting:
         return np.reshape(soldat[:,1:],soldat[:,1:].size)
     #------------------------------------------------------------------------------------------------------------------------------    
     def rate_func_iCovg_iRates(self,x,*fit_params): #cost function for non-dynamic kmc #covg and instantaneous gasseous rates of prod
+        no_ks = 2* self.MKM.Stoich.shape[0]
 
         fit_params_array = np.array(fit_params)
         if self.mask=='ON':
@@ -1022,7 +1024,6 @@ class Fitting:
             elif self.MKM.Thermo_Constraint=='OFF':
                 IGS = copy.deepcopy(self.IGS)
                 arr = np.arange(no_ks) 
-            no_ks = 2* self.MKM.Stoich.shape[0]
             masking_vec = copy.deepcopy(self.masking_vec)
             masking_vec = np.array([x - 1 for x in masking_vec]) #Indexes scaled to start from 0 to match what python understands
             mask = np.ones(arr.size, dtype=bool)
@@ -1163,12 +1164,10 @@ class Fitting:
 
             y_values = np.concatenate((y_values_covg,y_values_gratep)) #Including the instantaneous rates of productions to be compared with/error minimized
         
-        ######Enforcing Thermodynamic constraint
         if self.MKM.Thermo_Constraint=='ON':
             IGS = copy.deepcopy(self.IGS[:-1]) #Removing one to allow for TCRC calculations later #initial guess # [:-1] : ignoring the not-explicitly-fitted TCRC
         elif self.MKM.Thermo_Constraint=='OFF':
             IGS = copy.deepcopy(self.IGS)
-        ##########################################
 
         if self.mask == 'ON':
             masking_vec = copy.deepcopy(self.masking_vec) #masking vec
@@ -1199,6 +1198,7 @@ class Fitting:
                                                     ,method =method, bounds=bnds, maxfev=maxfev, xtol=xtol, ftol=ftol
                                                     ,p0=initial_vals)
         #Taking the fitted params and replacing it back into the list of all params
+        no_ks = 2* self.MKM.Stoich.shape[0]
         if self.mask == 'ON':
             params = np.array(params)
             ######Enforcing Thermodynamic constraint
@@ -1208,7 +1208,7 @@ class Fitting:
             elif self.MKM.Thermo_Constraint=='OFF':
                 IGS = copy.deepcopy(self.IGS)
                 arr = np.arange(no_ks)
-            no_ks = 2* self.MKM.Stoich.shape[0]
+            
             masking_vec = copy.deepcopy(self.masking_vec)
             masking_vec = np.array([x - 1 for x in masking_vec]) #Indexes scaled to start from 0 to match what python understands
             mask = np.ones(arr.size, dtype=bool)
@@ -1601,6 +1601,11 @@ class Fitting:
                            ,maxfev=1e5,xatol=1e-4,fatol=1e-4,adaptive=False,tol = 1e-8,xtol=1e-8,ftol=1e-8,gtol=1e-8,maxfun=1e6,maxiter=1e5,weight=1e0,n=40,filename='ML_dataset.xlsx'):
         #n is the number of rows worth of ML data, if it is changed and the present data has different rows, a new dataset will be generated with n rows 
         #masking_vec is the vector corresponding to the rate coefficients set to not being fitted. REMEMBER: list starts from 1 and the last rate constants can't be selected
+        if self.MKM.Thermo_Constraint=='ON':
+            print("Note: The last elementary reaction step's reverse rate coefficients is implicitly being fitted as a TCRC\n")
+        elif self.MKM.Thermo_Constraint=='OFF':
+            print('\nWARNING: Fitting will be performed with The Thermodynamic Constraint turned OFF.')
+
         no_ks = 2* self.MKM.Stoich.shape[0]
         self.mask = mask
         #Initial Guess: IGS
@@ -1621,7 +1626,10 @@ class Fitting:
             #Making sure not all rate coefficients are selected
             if masking_vec!=[]:
                 test_match = [x - 1 for x in masking_vec]
-                all_no = list(np.arange(no_ks-1))
+                if self.MKM.Thermo_Constraint=='ON':
+                    all_no = list(np.arange(no_ks-1))
+                elif self.MKM.Thermo_Constraint=='OFF':
+                    all_no = list(np.arange(no_ks))
 
                 if no_ks in masking_vec:
                     raise Exception("The last elementary step's reverse rate coefficient number",no_ks," is fitted implicilty. Can not manually set this to be masked.")
@@ -1645,14 +1653,15 @@ class Fitting:
                     masking_vec = [x - 1 for x in masking_vec] #To match python starting 0 index
                     if self.MKM.Thermo_Constraint=='ON':
                         arr = np.arange(no_ks-1) #Array to look from (-1 since TCRC value will never explicitly be fitted)
-                        print("Note: The last elementary reaction step's reverse rate coefficients is implicitly being fitted as a TCRC\n")
                     elif self.MKM.Thermo_Constraint=='OFF':
                         arr = np.arange(no_ks)
                     arr = np.array([x + 1 for x in arr]) #To match user expected counting from 1
                     mask = np.ones(arr.size, dtype=bool)
                     mask[masking_vec] = False
                     result = arr[mask]
+                    result_not = arr[~mask]
                     print("\nThe rate constants being fitted are:",result)
+                    print("The rate constants NOT being fitted are:",result_not,'\n')
                 else:
                     raise Exception("The masking vector needs to be smaller than the number of available rate constant")
 
