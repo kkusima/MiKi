@@ -201,7 +201,8 @@ class MKModel:
             matrix = np.max(np.abs(n_space)) #Maximum value to be used to provide scaled stoichiometric numbers from the null space
             sigma = np.abs(n_space)/matrix #The final stoichiometric number matrix
         else:
-            print('Warning: The transposed stoich-adsorbate matrix gave a trivial null space.\nThe stoichiometric numbers are now set to 1\n')
+            if self.Thermo_Constraint=='ON':
+                print('Warning: The transposed stoich-adsorbate matrix gave a trivial null space.\nThe stoichiometric numbers are now set to 1\n')
             sigma = list(np.ones(np.shape(Stoich)[0]))
         
         self.Stoichiometric_numbers = sigma

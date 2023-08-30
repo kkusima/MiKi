@@ -201,7 +201,8 @@ class MKModel:
             matrix = np.max(np.abs(n_space)) #Maximum value to be used to provide scaled stoichiometric numbers from the null space
             sigma = np.abs(n_space)/matrix #The final stoichiometric number matrix
         else:
-            print('Warning: The transposed stoich-adsorbate matrix gave a trivial null space.\nThe stoichiometric numbers are now set to 1\n')
+            if self.Thermo_Constraint=='ON':
+                print('Warning: The transposed stoich-adsorbate matrix gave a trivial null space.\nThe stoichiometric numbers are now set to 1\n')
             sigma = list(np.ones(np.shape(Stoich)[0]))
         
         self.Stoichiometric_numbers = sigma
@@ -491,14 +492,16 @@ class MKModel:
                 msg = 'Warning: STEADY STATE MAY NOT HAVE BEEN REACHED. Difference in a set of last two rates of production terms is NOT less than 1e-7. Last terms are returned anyways.'
                 return (end,msg)
     #------------------------------------------------------------------------------------------------------------------------------
-    def get_SS_coverages(self,tf=None,Tf_eval=[]): #Function used for calculating the steady state coverages
+    def get_SS_coverages(self,tf=None,Tf_eval=[],print_warning=True): #Function used for calculating the steady state coverages
         if tf==None:
             tf=self.Tf
 
         covg,covgt = self.solve_coverage(t=[self.Ti,tf],Tf_eval=Tf_eval)
         
         SS,msg = self.check_SS(covg,feature='coverage')
-        print(msg)
+
+        if print_warning!=False:
+            print(msg)
         return SS
     #------------------------------------------------------------------------------------------------------------------------------    
     def get_SS_rates_reaction(self,tf=None,Tf_eval=[]): #Function used for calculating the steady state rates of reaction
