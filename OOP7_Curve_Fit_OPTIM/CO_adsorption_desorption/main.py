@@ -288,6 +288,12 @@ class MKModel:
             if len(Coeff) != len(Theta):
                 raise Exception('The number of the coefficients doesnt match the relevant coverages. Please make sure to check the Parameters csv file for any errors. ')
             else:
+                # enablePrint()
+                # enablePrint()
+                # print('Theta',Theta)
+                # print('Coeff',Coeff)
+                # print('dot', np.dot(Theta,Coeff))
+                # print('kref',kref)
                 correction = np.exp(float(np.dot(Theta,Coeff)))
                 k = kref*correction
                 return k
