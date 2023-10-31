@@ -1,0 +1,962 @@
++---------------------------------------------------+
+|  ZACROS 3.01                                      |
+|  GRAPH-THEORETICAL KMC SIMULATION CODE            |
+|                                                   |
+|  Multiscale Computational Catalysis and           |
+|  Materials Science Research Group                 |
+|                                                   |
+|  Michail Stamatakis, Ph.D.                        |
+|  Chemical Engineering Department                  |
+|  University College London                        |
++---------------------------------------------------+
+
+Threading/multiprocessing information:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    Shared-memory multiprocessing with 44 OpenMP threads.
+
+Simulation setup:
+~~~~~~~~~~~~~~~~~
+
+    Random sequence with seed: 1609
+
+    Temperature: 423.00000000000000
+
+    Pressure: 1.0000000000000000E-004
+
+    Number of gas species: 3
+
+    Gas species names: O2 CO CO2 
+
+    Gas species energies: 0.0000000000000000 0.0000000000000000 -3.1800000000000002 
+
+    Gas species molecular weights: 31.998799999999999 28.010200000000001 44.009599999999999 
+
+    Gas species molar fractions: 0.10000000000000001 1.0000000000000001E-005 0.0000000000000000 
+
+    Number of surface species: 3
+
+    Surface species names: O* CO* O2* 
+
+    Surface species dentation:  1  1  1
+
+    Snapshots will be reported in file history_output.txt every 0.10000000000000001 time units
+
+    Process statistics will be reported in file procstat_output.txt every 0.10000000000000001 time units
+
+    Species numbers will be reported in file specnum_output.txt every 0.10000000000000001 time units
+
+    Keyword enable_stiffness_scaling parsed. Dynamic scaling of rate constants will be enabled to treat time-scale separation (stiffness).
+
+    [Stiffness scaling] Threshold on stiffness coefficient for applying scaling: 1.0000000000000000              
+
+    [Stiffness scaling] Minimum allowed separation of time-scales between fastest non-quasi-equilibrated step and slowest quasi-equilibrated one: 100.00000000000000              
+
+    [Stiffness scaling] Maximum allowed separation of time-scales between fastest non-quasi-equilibrated step and slowest quasi-equilibrated one: 196.00000000000000              
+
+    Event reporting turned off
+
+    [Memory Management] Using the default (per site) process queue size of 50.
+
+    [Memory Management] Using the default process participation list size of 200.
+
+    [Memory Management] Overriding size of (per site) global-cluster list with 160.
+
+    [Memory Management] Overriding size of global-cluster participation list with 160.
+
+    Maximum number of steps: 9223372036854775807 (maximum allowed value)
+
+    Max simulated time: 50.000000000000000              
+
+    Allowed walltime in seconds: 430000
+
+    Keyword no_restart parsed. You will not be able to resume the simulation at a later time.
+
+    The default Mersenne Twister 19937 random number generator will be used for this simulation.
+
+    Initializing the random number generator took 2.8399999999999999E-006 seconds
+
+    The default first reaction method will be used for propagating the KMC state, with a binary heap for the event-queue
+
+    [Stiffness scaling] Default frequency of stiffness checks: 1000                            
+
+    [Stiffness scaling] Default maximum allowed separation of time-scales between fastest and slowest quasi-equilibrated steps: 5.0000000000000000              
+
+    [Stiffness scaling] Default tolerance on partial-equilibrium ratio for detecting quasi-equilibrated steps: 5.0000000000000003E-002         
+
+    [Stiffness scaling] Default factor for scaling up/down the rate constants: 5.0000000000000000              
+
+Finished reading simulation input.
+
+Lattice setup:
+~~~~~~~~~~~~~~
+
+    Parsing unit cell data for a periodic lattice.
+
+    Unit cell area: 6.8590944030535104
+
+    Unit cell tiling: 96 x 96
+
+    Lattice surface area: 63213.414018541152
+
+    Number of lattice sites per cell: 2
+
+    Total number of lattice sites: 18432
+
+    Number of site types: 2
+
+    Site type names and total number of sites of that type:
+      fcc (9216)
+      hcp (9216)
+
+    Maximum coordination number: 9
+
+Finished reading lattice input.
+
+Energetics setup:
+~~~~~~~~~~~~~~~~~
+
+    Number of clusters: 88
+
+    Maximum number of sites involved in a cluster: 3
+
+    Clusters:
+
+        1. Empty:                       Mult = 1      ECI = -3.0000000000000001E-003  Entities:  
+        2. O_Point_fcc:                 Mult = 1      ECI = -1.0931999999999999       Entities:  O* 
+        3. O_pair_fcc_1NN:              Mult = 2      ECI = 0.22880000000000000       Entities:  O* O* 
+        4. O_pair_fcc_2NN:              Mult = 2      ECI = 2.8899999999999999E-002   Entities:  O* O* 
+        5. O_pair_fcc_3NN:              Mult = 2      ECI = -1.4200000000000001E-002  Entities:  O* O* 
+        6. O_triplet_fcc_linear:        Mult = 2      ECI = 4.2099999999999999E-002   Entities:  O* O* O*
+        7. O_triplet_fcc_bent:          Mult = 2      ECI = 4.0500000000000001E-002   Entities:  O* O* O*
+        8. O_triplet_fcc_triangle:      Mult = 6      ECI = -6.4100000000000004E-002  Entities:  O* O* O*
+        9. O_Point_hcp:                 Mult = 1      ECI = -0.93020000000000003      Entities:  O* 
+       10. O_pair_hcp_1NN:              Mult = 2      ECI = 0.22739999999999999       Entities:  O* O* 
+       11. O_pair_hcp_2NN:              Mult = 2      ECI = 2.9000000000000001E-002   Entities:  O* O* 
+       12. O_pair_hcp_3NN:              Mult = 2      ECI = -1.4400000000000000E-002  Entities:  O* O* 
+       13. O_triplet_hcp_linear:        Mult = 2      ECI = 4.2500000000000003E-002   Entities:  O* O* O*
+       14. O_triplet_hcp_bent:          Mult = 2      ECI = 4.0500000000000001E-002   Entities:  O* O* O*
+       15. O_triplet_hcp_triangle:      Mult = 6      ECI = -6.4100000000000004E-002  Entities:  O* O* O*
+       16. O_pair_fcc-hcp_1NN:          Mult = 1      ECI = 0.99990000000000001       Entities:  O* O* 
+       17. O_pair_fcc-hcp_2NN:          Mult = 1      ECI = 0.20890000000000000       Entities:  O* O* 
+       18. O_pair_fcc-hcp_3NN:          Mult = 1      ECI = 1.7899999999999999E-002   Entities:  O* O* 
+       19. CO_Point_fcc:                Mult = 1      ECI = -1.5000000000000000       Entities:  CO* 
+       20. CO_pair_fcc_1NN:             Mult = 2      ECI = 0.28489999999999999       Entities:  CO* CO* 
+       21. CO_pair_fcc_2NN:             Mult = 2      ECI = 9.7000000000000003E-003   Entities:  CO* CO* 
+       22. CO_pair_fcc_3NN:             Mult = 2      ECI = 1.2699999999999999E-002   Entities:  CO* CO* 
+       23. CO_triplet_fcc_linear:       Mult = 2      ECI = -7.6000000000000000E-003  Entities:  CO* CO* CO*
+       24. CO_triplet_fcc_bent:         Mult = 2      ECI = 1.6000000000000001E-003   Entities:  CO* CO* CO*
+       25. CO_triplet_fcc_triangle:     Mult = 6      ECI = 3.0599999999999999E-002   Entities:  CO* CO* CO*
+       26. CO_Point_hcp:                Mult = 1      ECI = -1.5000000000000000       Entities:  CO* 
+       27. CO_pair_hcp_1NN:             Mult = 2      ECI = 0.27950000000000003       Entities:  CO* CO* 
+       28. CO_pair_hcp_2NN:             Mult = 2      ECI = 8.6000000000000000E-003   Entities:  CO* CO* 
+       29. CO_pair_hcp_3NN:             Mult = 2      ECI = 1.2600000000000000E-002   Entities:  CO* CO* 
+       30. CO_triplet_hcp_linear:       Mult = 2      ECI = -5.8999999999999999E-003  Entities:  CO* CO* CO*
+       31. CO_triplet_hcp_bent:         Mult = 2      ECI = 4.7000000000000002E-003   Entities:  CO* CO* CO*
+       32. CO_triplet_hcp_triangle:     Mult = 6      ECI = 3.4400000000000000E-002   Entities:  CO* CO* CO*
+       33. CO_pair_hcp-fcc_1NN:         Mult = 1      ECI = 0.99990000000000001       Entities:  CO* CO* 
+       34. CO_pair_hcp-fcc_2NN:         Mult = 1      ECI = 0.21420000000000000       Entities:  CO* CO* 
+       35. CO_pair_hcp-fcc_3NN:         Mult = 1      ECI = 1.5599999999999999E-002   Entities:  CO* CO* 
+       36. CO-O_pair_fcc-fcc_1NN:       Mult = 1      ECI = 0.21850000000000000       Entities:  O* CO* 
+       37. CO-O_pair_fcc_fcc_2NN:       Mult = 1      ECI = 6.3000000000000000E-003   Entities:  O* CO* 
+       38. 2O-CO_triplet_fcc_linear:    Mult = 2      ECI = 0.16439999999999999       Entities:  O* CO* O*
+       39. O-2CO_triplet_fcc_linear:    Mult = 2      ECI = 7.1300000000000002E-002   Entities:  CO* O* CO*
+       40. 2O-CO_triplet_fcc_triangle:  Mult = 2      ECI = 8.1000000000000003E-002   Entities:  O* CO* O*
+       41. O-2CO_triplet_fcc_triangle:  Mult = 2      ECI = -5.9200000000000003E-002  Entities:  CO* O* CO*
+       42. CO-O_pair_hcp-hcp_1NN:       Mult = 1      ECI = 0.20090000000000000       Entities:  O* CO* 
+       43. CO-O_pair_hcp-hcp_2NN:       Mult = 1      ECI = 8.3400000000000002E-002   Entities:  O* CO* 
+       44. 2O-CO_triplet_hcp_linear:    Mult = 2      ECI = 0.23499999999999999       Entities:  O* CO* O*
+       45. O-2CO_triplet_hcp_linear:    Mult = 2      ECI = 0.20890000000000000       Entities:  CO* O* CO*
+       46. 2O-CO_triplet_hcp_triangle:  Mult = 2      ECI = -0.10460000000000000      Entities:  O* CO* O*
+       47. O-2CO_triplet_hcp_triangle:  Mult = 2      ECI = -0.11430000000000000      Entities:  CO* O* CO*
+       48. O-CO_pair_fcc-hcp_1NN:       Mult = 1      ECI = 0.99990000000000001       Entities:  O* CO* 
+       49. O-CO_pair_fcc-hcp_2NN:       Mult = 1      ECI = 0.16769999999999999       Entities:  O* CO* 
+       50. O-CO_pair_fcc-hcp_3NN:       Mult = 1      ECI = 1.7399999999999999E-002   Entities:  O* CO* 
+       51. O-CO_pair_hcp-fcc_1NN:       Mult = 1      ECI = 0.99990000000000001       Entities:  O* CO* 
+       52. O-CO_pair_hcp-fcc_2NN:       Mult = 1      ECI = 0.12390000000000000       Entities:  O* CO* 
+       53. O-CO_pair_hcp-fcc_3NN:       Mult = 1      ECI = 4.2500000000000003E-002   Entities:  O* CO* 
+       54. O2_Point_fcc:                Mult = 1      ECI = -0.97119999999999995      Entities:  O2* 
+       55. O2_Point_hcp:                Mult = 1      ECI = -0.82560000000000000      Entities:  O2* 
+       56. O2-O2_pair_fcc_1NN:          Mult = 2      ECI = 4.3499999999999997E-002   Entities:  O2* O2* 
+       57. O2-O2_pair_fcc_2NN:          Mult = 2      ECI = -6.4000000000000003E-003  Entities:  O2* O2* 
+       58. O2-O2_pair_fcc_3NN:          Mult = 2      ECI = -3.1000000000000000E-002  Entities:  O2* O2* 
+       59. O2-O2_pair_hcp_1NN:          Mult = 2      ECI = 4.3499999999999997E-002   Entities:  O2* O2* 
+       60. O2-O2_pair_hcp_2NN:          Mult = 2      ECI = -6.4000000000000003E-003  Entities:  O2* O2* 
+       61. O2-O2_pair_hcp_3NN:          Mult = 2      ECI = -3.1000000000000000E-002  Entities:  O2* O2* 
+       62. O2-O2_pair_fcc-hcp_1NN:      Mult = 1      ECI = 0.99990000000000001       Entities:  O2* O2* 
+       63. O2-O2_pair_fcc-hcp_2NN:      Mult = 1      ECI = 5.9999999999999998E-002   Entities:  O2* O2* 
+       64. O2-O2_pair_fcc-hcp_3NN:      Mult = 1      ECI = -0.11970000000000000      Entities:  O2* O2* 
+       65. O2-O_pair_fcc_1NN:           Mult = 1      ECI = 0.36099999999999999       Entities:  O2* O* 
+       66. O2-O_pair_fcc_2NN:           Mult = 1      ECI = 5.4999999999999997E-003   Entities:  O2* O* 
+       67. O2-O_pair_fcc_3NN:           Mult = 1      ECI = -1.5800000000000002E-002  Entities:  O2* O* 
+       68. O2-O_pair_hcp_1NN:           Mult = 1      ECI = 0.36099999999999999       Entities:  O2* O* 
+       69. O2-O_pair_hcp_2NN:           Mult = 1      ECI = 5.4999999999999997E-003   Entities:  O2* O* 
+       70. O2-O_pair_hcp_3NN:           Mult = 1      ECI = -1.5800000000000002E-002  Entities:  O2* O* 
+       71. O2-O_pair_fcc-hcp_1NN:       Mult = 1      ECI = 0.99990000000000001       Entities:  O2* O* 
+       72. O2-O_pair_hcp-fcc_1NN:       Mult = 1      ECI = 0.99990000000000001       Entities:  O2* O* 
+       73. O2-O_pair_fcc-hcp_2NN:       Mult = 1      ECI = 0.25140000000000001       Entities:  O2* O* 
+       74. O2-O_pair_hcp-fcc_2NN:       Mult = 1      ECI = 0.25140000000000001       Entities:  O2* O* 
+       75. O2-O_pair_fcc-hcp_3NN:       Mult = 1      ECI = 2.7699999999999999E-002   Entities:  O2* O* 
+       76. O2-O_pair_hcp-fcc_3NN:       Mult = 1      ECI = 2.7699999999999999E-002   Entities:  O2* O* 
+       77. O2-CO_pair_fcc_1NN:          Mult = 1      ECI = 0.41489999999999999       Entities:  O2* CO* 
+       78. O2-CO_pair_fcc_2NN:          Mult = 1      ECI = -1.0000000000000000E-004  Entities:  O2* CO* 
+       79. O2-CO_pair_fcc_3NN:          Mult = 1      ECI = -7.0000000000000001E-003  Entities:  O2* CO* 
+       80. O2-CO_pair_hcp_1NN:          Mult = 1      ECI = 0.41489999999999999       Entities:  O2* CO* 
+       81. O2-CO_pair_hcp_2NN:          Mult = 1      ECI = -1.0000000000000000E-004  Entities:  O2* CO* 
+       82. O2-CO_pair_hcp_3NN:          Mult = 1      ECI = -7.0000000000000001E-003  Entities:  O2* CO* 
+       83. O2-CO_pair_fcc-hcp_1NN:      Mult = 1      ECI = 0.99990000000000001       Entities:  O2* CO* 
+       84. O2-CO_pair_hcp-fcc_1NN:      Mult = 1      ECI = 0.99990000000000001       Entities:  O2* CO* 
+       85. O2-CO_pair_fcc-hcp_2NN:      Mult = 1      ECI = 5.6399999999999999E-002   Entities:  O2* CO* 
+       86. O2-CO_pair_hcp-fcc_2NN:      Mult = 1      ECI = 5.6399999999999999E-002   Entities:  O2* CO* 
+       87. O2-CO_pair_fcc-hcp_3NN:      Mult = 1      ECI = 1.2400000000000000E-002   Entities:  O2* CO* 
+       88. O2-CO_pair_hcp-fcc_3NN:      Mult = 1      ECI = 1.2400000000000000E-002   Entities:  O2* CO* 
+
+Finished reading energetics input.
+
+Mechanism setup:
+~~~~~~~~~~~~~~~~
+
+    Number of elementary steps: 22
+
+    Maximum number of sites involved in a step: 3
+
+    Reaction network:
+
+        1. CO_adsorption_fwd_fcc:      A(Tini) =  8.3028E-02    Ea       =  0.00    k(Tini) =  8.3028E-02    Reaction: CO  +  *(fcc)  ->  CO*(fcc)
+        2. CO_adsorption_rev_fcc:      A(Tini) =  5.5578E+16  [ Ea-ideal =  1.50    k(Tini) =  7.4709E-02 ]  Reaction: CO*(fcc)  ->  CO  +  *(fcc)
+        3. CO_adsorption_fwd_hcp:      A(Tini) =  8.3028E-02    Ea       =  0.00    k(Tini) =  8.3028E-02    Reaction: CO  +  *(hcp)  ->  CO*(hcp)
+        4. CO_adsorption_rev_hcp:      A(Tini) =  2.7459E+16  [ Ea-ideal =  1.50    k(Tini) =  3.6911E-02 ]  Reaction: CO*(hcp)  ->  CO  +  *(hcp)
+        5. O_diffusion_fwd:            A(Tini) =  7.8628E+12    Ea       =  0.53    k(Tini) =  3.8104E+06    Reaction: O*(fcc)  +  *(hcp)  ->  *(fcc)  +  O*(hcp)
+        6. O_diffusion_rev:            A(Tini) =  5.8108E+12  [ Ea-ideal =  0.37    k(Tini) =  2.4642E+08 ]  Reaction: *(fcc)  +  O*(hcp)  ->  O*(fcc)  +  *(hcp)
+        7. CO_diffusion_fwd:           A(Tini) =  5.3959E+12    Ea       =  0.26    k(Tini) =  4.3086E+09    Reaction: CO*(fcc)  +  *(hcp)  ->  *(fcc)  +  CO*(hcp)
+        8. CO_diffusion_rev:           A(Tini) =  2.6655E+12  [ Ea-ideal =  0.26    k(Tini) =  2.1284E+09 ]  Reaction: *(fcc)  +  CO*(hcp)  ->  CO*(fcc)  +  *(hcp)
+        9. CO_O_oxidation_fwd_fcc:     A(Tini) =  3.1161E+13    Ea       =  1.14    k(Tini) =  9.3500E-01    Reaction: CO*(fcc)  +  O*(fcc)  ->  CO2  +  *(fcc)  +  *(fcc)
+       10. CO_O_oxidation_rev_fcc:     A(Tini) =  0.0000E+00  [ Ea-ideal =  1.72    k(Tini) =  0.0000E+00 ]  Reaction: CO2  +  *(fcc)  +  *(fcc)  ->  CO*(fcc)  +  O*(fcc)
+       11. CO_O_oxidation_fwd_hcp:     A(Tini) =  1.1375E+13    Ea       =  1.08    k(Tini) =  1.3455E+00    Reaction: CO*(hcp)  +  O*(fcc)  ->  CO2  +  *(hcp)  +  *(fcc)
+       12. CO_O_oxidation_rev_hcp:     A(Tini) =  0.0000E+00  [ Ea-ideal =  1.67    k(Tini) =  0.0000E+00 ]  Reaction: CO2  +  *(hcp)  +  *(fcc)  ->  CO*(hcp)  +  O*(fcc)
+       13. O2_adsorption_fwd_fcc:      A(Tini) =  7.7681E+02    Ea       =  0.00    k(Tini) =  7.7681E+02    Reaction: O2  +  *(fcc)  ->  O2*(fcc)
+       14. O2_adsorption_rev_fcc:      A(Tini) =  1.2998E+16  [ Ea-ideal =  0.97    k(Tini) =  3.4885E+04 ]  Reaction: O2*(fcc)  ->  O2  +  *(fcc)
+       15. O2_adsorption_fwd_hcp:      A(Tini) =  7.7681E+02    Ea       =  0.00    k(Tini) =  7.7681E+02    Reaction: O2  +  *(hcp)  ->  O2*(hcp)
+       16. O2_adsorption_rev_hcp:      A(Tini) =  1.4050E+16  [ Ea-ideal =  0.83    k(Tini) =  2.0473E+06 ]  Reaction: O2*(hcp)  ->  O2  +  *(hcp)
+       17. O2_diffusion_fwd:           A(Tini) =  2.0265E+12    Ea       =  0.10    k(Tini) =  1.3041E+11    Reaction: O2*(hcp)  +  *(fcc)  ->  *(hcp)  +  O2*(fcc)
+       18. O2_diffusion_rev:           A(Tini) =  2.1906E+12  [ Ea-ideal =  0.25    k(Tini) =  2.5966E+09 ]  Reaction: *(hcp)  +  O2*(fcc)  ->  O2*(hcp)  +  *(fcc)
+       19. O2_dissociation_fwd_fcc:    A(Tini) =  1.3694E+13    Ea       =  0.79    k(Tini) =  5.2988E+03    Reaction: O2*(fcc)  +  *(hcp)  +  *(hcp)  ->  *(fcc)  +  O*(hcp)  +  O*(hcp)
+       20. O2_dissociation_rev_fcc:    A(Tini) =  3.6314E+13  [ Ea-ideal =  1.68    k(Tini) =  3.5767E-07 ]  Reaction: *(fcc)  +  O*(hcp)  +  O*(hcp)  ->  O2*(fcc)  +  *(hcp)  +  *(hcp)
+       21. O2_dissociation_fwd_hcp:    A(Tini) =  1.4804E+13    Ea       =  0.65    k(Tini) =  2.6671E+05    Reaction: O2*(hcp)  +  *(fcc)  +  *(fcc)  ->  *(hcp)  +  O*(fcc)  +  O*(fcc)
+       22. O2_dissociation_rev_hcp:    A(Tini) =  6.6494E+13  [ Ea-ideal =  2.01    k(Tini) =  7.3349E-11 ]  Reaction: *(hcp)  +  O*(fcc)  +  O*(fcc)  ->  O2*(hcp)  +  *(fcc)  +  *(fcc)
+
+    Stiffness scaling enabled for the following elementary steps:
+        Fwd/Rev: 1/2 - CO_adsorption_fwd_fcc/CO_adsorption_rev_fcc
+        Fwd/Rev: 3/4 - CO_adsorption_fwd_hcp/CO_adsorption_rev_hcp
+        Fwd/Rev: 5/6 - O_diffusion_fwd/O_diffusion_rev
+        Fwd/Rev: 7/8 - CO_diffusion_fwd/CO_diffusion_rev
+        Fwd/Rev: 13/14 - O2_adsorption_fwd_fcc/O2_adsorption_rev_fcc
+        Fwd/Rev: 15/16 - O2_adsorption_fwd_hcp/O2_adsorption_rev_hcp
+        Fwd/Rev: 17/18 - O2_diffusion_fwd/O2_diffusion_rev
+
+Finished reading mechanism input.
+
+Initial state setup:
+~~~~~~~~~~~~~~~~~~~~
+
+    18431 "on-sites" seeding instructions
+
+        Detailed reporting about "on-sites" seeding instructions suppressed.
+
+        If you need more details about these instructions add the following line to simulation_input.dat:
+
+          on_sites_seeding_report on
+  
+
+Finished reading initial state input.
+
+Preparing simulation:
+~~~~~~~~~~~~~~~~~~~~~
+
+    Constructing requested lattice structure.
+
+        Lattice structure written to lattice_output.txt
+
+    Pre-allocating KMC-simulation-handling datastructures... done!
+
+    Pre-allocating lattice-handling datastructures... done!
+
+    Pre-allocating event-rate-handling datastructures... done!
+
+    Initializing lattice state.
+
+        18431 explicit-seeding instructions executed.
+
+    Initializing energetics.
+
+        Total adlayer energy: 27585.621699979591
+
+    Initializing lattice events.
+
+        28826 lattice events found and stored in binary heap.
+
+Commencing simulation:
+~~~~~~~~~~~~~~~~~~~~~~
+Stiffness detected at time t = 9.0271555340237373E-007:
+   The fastest non-equilibrated step is 4 - CO_adsorption_rev_hcp. Occurred 1 times (net count if reversible).
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+     Elementary step 5 - O_diffusion_fwd (1.2828736369467608E-002). Occurred 10936 times (too fast). StiffCoeffNew/Old = 1.2828736369467608E-002         
+     Elementary step 6 - O_diffusion_rev (1.2828736369467608E-002). Occurred 10913 times (too fast). StiffCoeffNew/Old = 1.2828736369467608E-002         
+
+Stiffness detected at time t = 3.3413582781922574E-005:
+   The fastest non-equilibrated step is 16 - O2_adsorption_rev_hcp. Occurred 1 times (net count if reversible).
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+     Elementary step 5 - O_diffusion_fwd (1.6354244142464624E-004). Occurred 11016 times (too fast). StiffCoeffNew/Old = 1.2748133309051174E-002         
+     Elementary step 6 - O_diffusion_rev (1.6354244142464624E-004). Occurred 10982 times (too fast). StiffCoeffNew/Old = 1.2748133309051174E-002         
+
+Stiffness detected at time t = 2.5396675085177841E-003:
+   The fastest non-equilibrated step is 16 - O2_adsorption_rev_hcp. Occurred 11 times (net count if reversible).
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+     Elementary step 5 - O_diffusion_fwd (2.3013099396377489E-005). Occurred 10950 times (too fast). StiffCoeffNew/Old = 0.14071637426900588             
+     Elementary step 6 - O_diffusion_rev (2.3013099396377489E-005). Occurred 10944 times (too fast). StiffCoeffNew/Old = 0.14071637426900588             
+
+Stiffness detected at time t = 1.8632561019082502E-002:
+   The fastest non-equilibrated step is 16 - O2_adsorption_rev_hcp. Occurred 33 times (net count if reversible).
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+     Elementary step 5 - O_diffusion_fwd (9.7604442496340784E-006). Occurred 10930 times (too fast). StiffCoeffNew/Old = 0.42412558523822647             
+     Elementary step 6 - O_diffusion_rev (9.7604442496340784E-006). Occurred 10893 times (too fast). StiffCoeffNew/Old = 0.42412558523822647             
+
+Stiffness detected at time t = 5.2383561282644472E-002:
+   The fastest non-equilibrated step is 16 - O2_adsorption_rev_hcp. Occurred 41 times (net count if reversible).
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+     Elementary step 5 - O_diffusion_fwd (5.2135631856411329E-006). Occurred 10823 times (too fast). StiffCoeffNew/Old = 0.53415224269495631             
+     Elementary step 6 - O_diffusion_rev (5.2135631856411329E-006). Occurred 10746 times (too fast). StiffCoeffNew/Old = 0.53415224269495631             
+
+Stiffness detected at time t = 0.10951273910976757:
+   The fastest non-equilibrated step is 20 - O2_dissociation_rev_fcc. Occurred 43 times (net count if reversible).
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+     Elementary step 5 - O_diffusion_fwd (2.9318683211171993E-006). Occurred 10747 times (too fast). StiffCoeffNew/Old = 0.56235404016814572             
+     Elementary step 6 - O_diffusion_rev (2.9318683211171993E-006). Occurred 10705 times (too fast). StiffCoeffNew/Old = 0.56235404016814572             
+
+Stiffness detected at time t = 0.16886621259861345:
+   The fastest non-equilibrated step is 20 - O2_dissociation_rev_fcc. Occurred 29 times (net count if reversible).
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+     Elementary step 5 - O_diffusion_fwd (1.7528177564034503E-006). Occurred 6795 times (too fast). StiffCoeffNew/Old = 0.59785009571491687             
+     Elementary step 6 - O_diffusion_rev (1.7528177564034503E-006). Occurred 6791 times (too fast). StiffCoeffNew/Old = 0.59785009571491687             
+
+Stiffness detected at time t = 0.30511951353823541:
+   The fastest non-equilibrated step is 20 - O2_dissociation_rev_fcc. Occurred 44 times (net count if reversible).
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+     Elementary step 5 - O_diffusion_fwd (1.0849434665841293E-006). Occurred 10023 times (too fast). StiffCoeffNew/Old = 0.61897106109324762             
+     Elementary step 6 - O_diffusion_rev (1.0849434665841293E-006). Occurred 9952 times (too fast). StiffCoeffNew/Old = 0.61897106109324762             
+
+Stiffness detected at time t = 0.49546524748839460:
+   The fastest non-equilibrated step is 20 - O2_dissociation_rev_fcc. Occurred 43 times (net count if reversible).
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+     Elementary step 5 - O_diffusion_fwd (7.2675638909941674E-007). Occurred 8987 times (too fast). StiffCoeffNew/Old = 0.66985645933014359             
+     Elementary step 6 - O_diffusion_rev (7.2675638909941674E-007). Occurred 9012 times (too fast). StiffCoeffNew/Old = 0.66985645933014359             
+
+Stiffness detected at time t = 0.69357056068009060:
+   The fastest non-equilibrated step is 20 - O2_dissociation_rev_fcc. Occurred 33 times (net count if reversible).
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+     Elementary step 5 - O_diffusion_fwd (5.1647662169501695E-007). Occurred 6556 times (too fast). StiffCoeffNew/Old = 0.71065989847715738             
+     Elementary step 6 - O_diffusion_rev (5.1647662169501695E-007). Occurred 6501 times (too fast). StiffCoeffNew/Old = 0.71065989847715738             
+
+Stiffness scaling possibly too aggressive at time t = 0.69358354915388376:
+   Applying a scale-up of the kinetic constants by a factor of 5.0000000000000000.
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+    Elementary step 5 - O_diffusion_fwd (2.5823831084750849E-006). Occurred 0 times. PartEquil ratio = 0.0000000000000000. StiffCoeffNew/Old = 5.0000000000000000.
+    Elementary step 6 - O_diffusion_rev (2.5823831084750849E-006). Occurred 1 times. PartEquil ratio = 1.0000000000000000. StiffCoeffNew/Old = 5.0000000000000000.
+
+Stiffness detected at time t = 0.69358354915388376:
+   The fastest non-equilibrated step is 6 - O_diffusion_rev. Occurred 1 times (net count if reversible).
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+     Elementary step 7 - CO_diffusion_fwd (1.2728429857259750E-002). Occurred 11000 times (too fast). StiffCoeffNew/Old = 1.2728429857259750E-002         
+     Elementary step 8 - CO_diffusion_rev (1.2728429857259750E-002). Occurred 10999 times (too fast). StiffCoeffNew/Old = 1.2728429857259750E-002         
+
+Stiffness detected at time t = 0.77574246159306370:
+   The fastest non-equilibrated step is 20 - O2_dissociation_rev_fcc. Occurred 11 times (net count if reversible).
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+     Elementary step 5 - O_diffusion_fwd (3.9932422804012759E-007). Occurred 9962 times (too fast). StiffCoeffNew/Old = 0.15463399939752986             
+     Elementary step 6 - O_diffusion_rev (3.9932422804012759E-007). Occurred 9959 times (too fast). StiffCoeffNew/Old = 0.15463399939752986             
+     Elementary step 7 - CO_diffusion_fwd (7.4249174167348539E-002). Occurred 264 times (too slow). StiffCoeffNew/Old = 5.8333333333333330              
+     Elementary step 8 - CO_diffusion_rev (7.4249174167348539E-002). Occurred 264 times (too slow). StiffCoeffNew/Old = 5.8333333333333330              
+
+Stiffness scaling possibly too aggressive at time t = 1.0576794068413515:
+   Applying a scale-up of the kinetic constants by a factor of 5.0000000000000000.
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+    Elementary step 7 - CO_diffusion_fwd (0.37124587083674271). Occurred 1 times. PartEquil ratio = 1.0000000000000000. StiffCoeffNew/Old = 5.0000000000000000.
+    Elementary step 8 - CO_diffusion_rev (0.37124587083674271). Occurred 0 times. PartEquil ratio = 0.0000000000000000. StiffCoeffNew/Old = 5.0000000000000000.
+
+Stiffness detected at time t = 1.4893871259212321:
+   The fastest non-equilibrated step is 20 - O2_dissociation_rev_fcc. Occurred 15 times (net count if reversible).
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+     Elementary step 5 - O_diffusion_fwd (1.9815238158891018E-007). Occurred 4232 times (too fast). StiffCoeffNew/Old = 0.49621928166351603             
+     Elementary step 6 - O_diffusion_rev (1.9815238158891018E-007). Occurred 4243 times (too fast). StiffCoeffNew/Old = 0.49621928166351603             
+     Elementary step 13 - O2_adsorption_fwd_fcc (0.48454083987078911). Occurred 4334 times (too fast). StiffCoeffNew/Old = 0.48454083987078911             
+     Elementary step 14 - O2_adsorption_rev_fcc (0.48454083987078911). Occurred 4344 times (too fast). StiffCoeffNew/Old = 0.48454083987078911             
+
+Stiffness detected at time t = 1.8170585689708412:
+   The fastest non-equilibrated step is 20 - O2_dissociation_rev_fcc. Occurred 20 times (net count if reversible).
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+     Elementary step 7 - CO_diffusion_fwd (1.0000000000000000). Occurred 140 times (too slow). StiffCoeffNew/Old = 2.6936326530612247              
+     Elementary step 8 - CO_diffusion_rev (1.0000000000000000). Occurred 141 times (too slow). StiffCoeffNew/Old = 2.6936326530612247              
+
+Stiffness detected at time t = 2.0769947472049370:
+   The fastest non-equilibrated step is 20 - O2_dissociation_rev_fcc. Occurred 18 times (net count if reversible).
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+     Elementary step 15 - O2_adsorption_fwd_hcp (0.63047285464098068). Occurred 3997 times (too fast). StiffCoeffNew/Old = 0.63047285464098068             
+     Elementary step 16 - O2_adsorption_rev_hcp (0.63047285464098068). Occurred 4014 times (too fast). StiffCoeffNew/Old = 0.63047285464098068             
+
+Stiffness detected at time t = 2.3808785046880181:
+   The fastest non-equilibrated step is 20 - O2_dissociation_rev_fcc. Occurred 20 times (net count if reversible).
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+     Elementary step 13 - O2_adsorption_fwd_fcc (0.31915181172387891). Occurred 4251 times (too fast). StiffCoeffNew/Old = 0.65866854857680535             
+     Elementary step 14 - O2_adsorption_rev_fcc (0.31915181172387891). Occurred 4266 times (too fast). StiffCoeffNew/Old = 0.65866854857680535             
+
+Stiffness detected at time t = 2.6814181082047028:
+   The fastest non-equilibrated step is 20 - O2_dissociation_rev_fcc. Occurred 15 times (net count if reversible).
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+     Elementary step 13 - O2_adsorption_fwd_fcc (0.18700301468196032). Occurred 3584 times (too fast). StiffCoeffNew/Old = 0.58593750000000011             
+     Elementary step 14 - O2_adsorption_rev_fcc (0.18700301468196032). Occurred 3593 times (too fast). StiffCoeffNew/Old = 0.58593750000000011             
+     Elementary step 15 - O2_adsorption_fwd_hcp (0.35278257254091649). Occurred 3753 times (too fast). StiffCoeffNew/Old = 0.55955235811350923             
+     Elementary step 16 - O2_adsorption_rev_hcp (0.35278257254091649). Occurred 3768 times (too fast). StiffCoeffNew/Old = 0.55955235811350923             
+
+Stiffness scaling possibly too aggressive at time t = 2.9903650365841274:
+   Applying a scale-up of the kinetic constants by a factor of 5.0000000000000000.
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+    Elementary step 5 - O_diffusion_fwd (9.9076190794455089E-007). Occurred 8 times. PartEquil ratio = 0.42105263157894735. StiffCoeffNew/Old = 5.0000000000000000.
+    Elementary step 6 - O_diffusion_rev (9.9076190794455089E-007). Occurred 11 times. PartEquil ratio = 0.57894736842105265. StiffCoeffNew/Old = 5.0000000000000000.
+
+Stiffness detected at time t = 2.9903650365841274:
+   The fastest non-equilibrated step is 6 - O_diffusion_rev. Occurred 3 times (net count if reversible).
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+     Elementary step 13 - O2_adsorption_fwd_fcc (1.0000000000000000). Occurred 14 times (too slow). StiffCoeffNew/Old = 5.3475073741496608              
+     Elementary step 14 - O2_adsorption_rev_fcc (1.0000000000000000). Occurred 15 times (too slow). StiffCoeffNew/Old = 5.3475073741496608              
+     Elementary step 15 - O2_adsorption_fwd_hcp (1.0000000000000000). Occurred 9 times (too slow). StiffCoeffNew/Old = 2.8346071428571427              
+     Elementary step 16 - O2_adsorption_rev_hcp (1.0000000000000000). Occurred 8 times (too slow). StiffCoeffNew/Old = 2.8346071428571427              
+     Elementary step 17 - O2_diffusion_fwd (3.8296708306738397E-002). Occurred 10968 times (too fast). StiffCoeffNew/Old = 3.8296708306738397E-002         
+     Elementary step 18 - O2_diffusion_rev (3.8296708306738397E-002). Occurred 10967 times (too fast). StiffCoeffNew/Old = 3.8296708306738397E-002         
+
+Stiffness detected at time t = 3.0463162930782270:
+   The fastest non-equilibrated step is 20 - O2_dissociation_rev_fcc. Occurred 2 times (net count if reversible).
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+     Elementary step 5 - O_diffusion_fwd (1.0588295199407415E-007). Occurred 2620 times (too fast). StiffCoeffNew/Old = 0.10687022900763360             
+     Elementary step 6 - O_diffusion_rev (1.0588295199407415E-007). Occurred 2631 times (too fast). StiffCoeffNew/Old = 0.10687022900763360             
+     Elementary step 13 - O2_adsorption_fwd_fcc (0.12797074954296161). Occurred 2190 times (too fast). StiffCoeffNew/Old = 0.12797074954296161             
+     Elementary step 14 - O2_adsorption_rev_fcc (0.12797074954296161). Occurred 2188 times (too fast). StiffCoeffNew/Old = 0.12797074954296161             
+     Elementary step 15 - O2_adsorption_fwd_hcp (0.28140703517587939). Occurred 995 times (too fast). StiffCoeffNew/Old = 0.28140703517587939             
+     Elementary step 16 - O2_adsorption_rev_hcp (0.28140703517587939). Occurred 1001 times (too fast). StiffCoeffNew/Old = 0.28140703517587939             
+     Elementary step 17 - O2_diffusion_fwd (2.0765062598541348E-003). Occurred 5164 times (too fast). StiffCoeffNew/Old = 5.4221533694810232E-002         
+     Elementary step 18 - O2_diffusion_rev (2.0765062598541348E-003). Occurred 5168 times (too fast). StiffCoeffNew/Old = 5.4221533694810232E-002         
+
+Stiffness scaling possibly too aggressive at time t = 3.6153136154857939:
+   Applying a scale-up of the kinetic constants by a factor of 5.0000000000000000.
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+    Elementary step 17 - O2_diffusion_fwd (1.0382531299270675E-002). Occurred 4 times. PartEquil ratio = 0.33333333333333331. StiffCoeffNew/Old = 5.0000000000000000.
+    Elementary step 18 - O2_diffusion_rev (1.0382531299270675E-002). Occurred 8 times. PartEquil ratio = 0.66666666666666663. StiffCoeffNew/Old = 5.0000000000000000.
+
+Stiffness scaling possibly too aggressive at time t = 3.6154277805617085:
+   Applying a scale-up of the kinetic constants by a factor of 5.0000000000000000.
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+    Elementary step 5 - O_diffusion_fwd (5.2941475997037072E-007). Occurred 0 times. PartEquil ratio = 0.0000000000000000. StiffCoeffNew/Old = 5.0000000000000000.
+    Elementary step 6 - O_diffusion_rev (5.2941475997037072E-007). Occurred 1 times. PartEquil ratio = 1.0000000000000000. StiffCoeffNew/Old = 5.0000000000000000.
+
+Stiffness detected at time t = 3.6154277805617085:
+   The fastest non-equilibrated step is 6 - O_diffusion_rev. Occurred 1 times (net count if reversible).
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+     Elementary step 7 - CO_diffusion_fwd (1.2729587197672304E-002). Occurred 10998 times (too fast). StiffCoeffNew/Old = 1.2729587197672304E-002         
+     Elementary step 8 - CO_diffusion_rev (1.2729587197672304E-002). Occurred 10999 times (too fast). StiffCoeffNew/Old = 1.2729587197672304E-002         
+     Elementary step 15 - O2_adsorption_fwd_hcp (1.0000000000000000). Occurred 1 times (too slow). StiffCoeffNew/Old = 3.5535714285714288              
+     Elementary step 16 - O2_adsorption_rev_hcp (1.0000000000000000). Occurred 1 times (too slow). StiffCoeffNew/Old = 3.5535714285714288              
+
+Stiffness detected at time t = 3.8349059879006449:
+   The fastest non-equilibrated step is 20 - O2_dissociation_rev_fcc. Occurred 4 times (net count if reversible).
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+     Elementary step 5 - O_diffusion_fwd (5.6235255232057585E-008). Occurred 5272 times (too fast). StiffCoeffNew/Old = 0.10622154779969650             
+     Elementary step 6 - O_diffusion_rev (5.6235255232057585E-008). Occurred 5274 times (too fast). StiffCoeffNew/Old = 0.10622154779969650             
+     Elementary step 7 - CO_diffusion_fwd (5.9207382314754907E-003). Occurred 1205 times (too fast). StiffCoeffNew/Old = 0.46511627906976749             
+     Elementary step 8 - CO_diffusion_rev (5.9207382314754907E-003). Occurred 1204 times (too fast). StiffCoeffNew/Old = 0.46511627906976749             
+     Elementary step 13 - O2_adsorption_fwd_fcc (7.2460687304406982E-002). Occurred 989 times (too fast). StiffCoeffNew/Old = 0.56622851365015170             
+     Elementary step 14 - O2_adsorption_rev_fcc (7.2460687304406982E-002). Occurred 993 times (too fast). StiffCoeffNew/Old = 0.56622851365015170             
+     Elementary step 15 - O2_adsorption_fwd_hcp (0.16175621028307338). Occurred 3462 times (too fast). StiffCoeffNew/Old = 0.16175621028307338             
+     Elementary step 16 - O2_adsorption_rev_hcp (0.16175621028307338). Occurred 3464 times (too fast). StiffCoeffNew/Old = 0.16175621028307338             
+
+Stiffness detected at time t = 4.8887802182126636:
+   The fastest non-equilibrated step is 20 - O2_dissociation_rev_fcc. Occurred 38 times (net count if reversible).
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+     Elementary step 5 - O_diffusion_fwd (1.0823862439744802E-007). Occurred 2764 times (too slow). StiffCoeffNew/Old = 1.9247467438494934              
+     Elementary step 6 - O_diffusion_rev (1.0823862439744802E-007). Occurred 2784 times (too slow). StiffCoeffNew/Old = 1.9247467438494934              
+     Elementary step 7 - CO_diffusion_fwd (8.5593280955026121E-002). Occurred 370 times (too slow). StiffCoeffNew/Old = 14.456521739130435              
+     Elementary step 8 - CO_diffusion_rev (8.5593280955026121E-002). Occurred 368 times (too slow). StiffCoeffNew/Old = 14.456521739130435              
+     Elementary step 13 - O2_adsorption_fwd_fcc (0.10631297751225734). Occurred 3626 times (too slow). StiffCoeffNew/Old = 1.4671814671814671              
+     Elementary step 14 - O2_adsorption_rev_fcc (0.10631297751225734). Occurred 3658 times (too slow). StiffCoeffNew/Old = 1.4671814671814671              
+     Elementary step 15 - O2_adsorption_fwd_hcp (0.22844253748498819). Occurred 3767 times (too slow). StiffCoeffNew/Old = 1.4122644013804091              
+     Elementary step 16 - O2_adsorption_rev_hcp (0.22844253748498819). Occurred 3777 times (too slow). StiffCoeffNew/Old = 1.4122644013804091              
+     Elementary step 17 - O2_diffusion_fwd (0.92058444186866639). Occurred 60 times (too slow). StiffCoeffNew/Old = 88.666666666666657              
+     Elementary step 18 - O2_diffusion_rev (0.92058444186866639). Occurred 66 times (too slow). StiffCoeffNew/Old = 88.666666666666657              
+
+Stiffness detected at time t = 5.5234174566172758:
+   The fastest non-equilibrated step is 20 - O2_dissociation_rev_fcc. Occurred 13 times (net count if reversible).
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+     Elementary step 5 - O_diffusion_fwd (6.4736870326439494E-008). Occurred 3043 times (too fast). StiffCoeffNew/Old = 0.59809398619783105             
+     Elementary step 6 - O_diffusion_rev (6.4736870326439494E-008). Occurred 3052 times (too fast). StiffCoeffNew/Old = 0.59809398619783105             
+     Elementary step 7 - CO_diffusion_fwd (0.84205281804404086). Occurred 185 times (too slow). StiffCoeffNew/Old = 9.8378378378378386              
+     Elementary step 8 - CO_diffusion_rev (0.84205281804404086). Occurred 186 times (too slow). StiffCoeffNew/Old = 9.8378378378378386              
+     Elementary step 13 - O2_adsorption_fwd_fcc (5.9352643887211155E-002). Occurred 3260 times (too fast). StiffCoeffNew/Old = 0.55828220858895705             
+     Elementary step 14 - O2_adsorption_rev_fcc (5.9352643887211155E-002). Occurred 3265 times (too fast). StiffCoeffNew/Old = 0.55828220858895705             
+     Elementary step 15 - O2_adsorption_fwd_hcp (0.11095954582937778). Occurred 3747 times (too fast). StiffCoeffNew/Old = 0.48572191086202299             
+     Elementary step 16 - O2_adsorption_rev_hcp (0.11095954582937778). Occurred 3758 times (too fast). StiffCoeffNew/Old = 0.48572191086202299             
+     Elementary step 17 - O2_diffusion_fwd (1.0000000000000000). Occurred 502 times (too slow). StiffCoeffNew/Old = 1.0862664569587233              
+     Elementary step 18 - O2_diffusion_rev (1.0000000000000000). Occurred 509 times (too slow). StiffCoeffNew/Old = 1.0862664569587233              
+
+Stiffness detected at time t = 6.2086278364369241:
+   The fastest non-equilibrated step is 20 - O2_dissociation_rev_fcc. Occurred 17 times (net count if reversible).
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+     Elementary step 7 - CO_diffusion_fwd (1.0000000000000000). Occurred 637 times (too slow). StiffCoeffNew/Old = 1.1875739604112319              
+     Elementary step 8 - CO_diffusion_rev (1.0000000000000000). Occurred 637 times (too slow). StiffCoeffNew/Old = 1.1875739604112319              
+
+Stiffness detected at time t = 7.0952663393185249:
+   The fastest non-equilibrated step is 20 - O2_dissociation_rev_fcc. Occurred 9 times (net count if reversible).
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+     Elementary step 5 - O_diffusion_fwd (3.2640438820053532E-008). Occurred 2499 times (too fast). StiffCoeffNew/Old = 0.50420168067226900             
+     Elementary step 6 - O_diffusion_rev (3.2640438820053532E-008). Occurred 2575 times (too fast). StiffCoeffNew/Old = 0.50420168067226900             
+     Elementary step 7 - CO_diffusion_fwd (0.70351758793969854). Occurred 1791 times (too fast). StiffCoeffNew/Old = 0.70351758793969854             
+     Elementary step 8 - CO_diffusion_rev (0.70351758793969854). Occurred 1795 times (too fast). StiffCoeffNew/Old = 0.70351758793969854             
+     Elementary step 13 - O2_adsorption_fwd_fcc (2.4343857844363950E-002). Occurred 3072 times (too fast). StiffCoeffNew/Old = 0.41015625000000000             
+     Elementary step 14 - O2_adsorption_rev_fcc (2.4343857844363950E-002). Occurred 3077 times (too fast). StiffCoeffNew/Old = 0.41015625000000000             
+     Elementary step 15 - O2_adsorption_fwd_hcp (4.7586462813143639E-002). Occurred 2938 times (too fast). StiffCoeffNew/Old = 0.42886317222600412             
+     Elementary step 16 - O2_adsorption_rev_hcp (4.7586462813143639E-002). Occurred 2946 times (too fast). StiffCoeffNew/Old = 0.42886317222600412             
+
+Stiffness detected at time t = 7.1619942667163361:
+   All elementary processes that have occurred in the past interval appear as fast and quasi-equilibrated.
+   The slowest equilibrated step is 3/4 - CO_adsorption_fwd_hcp/CO_adsorption_rev_hcp. Occurred 14/14 times. Stiffness coefficient: 1.0000000000000000.
+   The fastest equilibrated step is 7/8 - CO_diffusion_fwd/CO_diffusion_rev. Occurred 10562/10561 times. Stiffness coefficient: 0.70351758793969854.
+   Since the scaling coefficient of the fastest quasi-equilibrated step is below the threshold of 1.0000000000000000, any newly computed scaling coefficients above the threshold have been automatically mapped to 1.
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+     Elementary step 1 - CO_adsorption_fwd_fcc (0.69999999999999996). Occurred 20 times (too fast). StiffCoeffNew/Old = 0.69999999999999996             
+     Elementary step 2 - CO_adsorption_rev_fcc (0.69999999999999996). Occurred 19 times (too fast). StiffCoeffNew/Old = 0.69999999999999996             
+     Elementary step 5 - O_diffusion_fwd (4.9670232987037988E-009). Occurred 92 times (too fast). StiffCoeffNew/Old = 0.15217391304347827             
+     Elementary step 6 - O_diffusion_rev (4.9670232987037988E-009). Occurred 99 times (too fast). StiffCoeffNew/Old = 0.15217391304347827             
+     Elementary step 7 - CO_diffusion_fwd (9.3251715879149591E-004). Occurred 10562 times (too fast). StiffCoeffNew/Old = 1.3255065328536262E-003         
+     Elementary step 8 - CO_diffusion_rev (9.3251715879149591E-004). Occurred 10561 times (too fast). StiffCoeffNew/Old = 1.3255065328536262E-003         
+     Elementary step 13 - O2_adsorption_fwd_fcc (3.4425657557686398E-003). Occurred 99 times (too fast). StiffCoeffNew/Old = 0.14141414141414144             
+     Elementary step 14 - O2_adsorption_rev_fcc (3.4425657557686398E-003). Occurred 99 times (too fast). StiffCoeffNew/Old = 0.14141414141414144             
+     Elementary step 15 - O2_adsorption_fwd_hcp (5.6941066614018022E-003). Occurred 117 times (too fast). StiffCoeffNew/Old = 0.11965811965811965             
+     Elementary step 16 - O2_adsorption_rev_hcp (5.6941066614018022E-003). Occurred 118 times (too fast). StiffCoeffNew/Old = 0.11965811965811965             
+     Elementary step 17 - O2_diffusion_fwd (0.15053763440860216). Occurred 93 times (too fast). StiffCoeffNew/Old = 0.15053763440860216             
+     Elementary step 18 - O2_diffusion_rev (0.15053763440860216). Occurred 93 times (too fast). StiffCoeffNew/Old = 0.15053763440860216             
+
+Stiffness detected at time t = 9.0084974303880099:
+   The fastest non-equilibrated step is 20 - O2_dissociation_rev_fcc. Occurred 23 times (net count if reversible).
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+     Elementary step 1 - CO_adsorption_fwd_fcc (1.0000000000000000). Occurred 365 times (too slow). StiffCoeffNew/Old = 1.4285714285714286              
+     Elementary step 2 - CO_adsorption_rev_fcc (1.0000000000000000). Occurred 362 times (too slow). StiffCoeffNew/Old = 1.4285714285714286              
+     Elementary step 5 - O_diffusion_fwd (4.2311679951921251E-008). Occurred 427 times (too slow). StiffCoeffNew/Old = 8.5185185185185190              
+     Elementary step 6 - O_diffusion_rev (4.2311679951921251E-008). Occurred 378 times (too slow). StiffCoeffNew/Old = 8.5185185185185190              
+     Elementary step 7 - CO_diffusion_fwd (1.5142235256220965E-003). Occurred 1985 times (too slow). StiffCoeffNew/Old = 1.6238023197175999              
+     Elementary step 8 - CO_diffusion_rev (1.5142235256220965E-003). Occurred 1983 times (too slow). StiffCoeffNew/Old = 1.6238023197175999              
+     Elementary step 13 - O2_adsorption_fwd_fcc (1.9013828016423706E-002). Occurred 583 times (too slow). StiffCoeffNew/Old = 5.5231560891938249              
+     Elementary step 14 - O2_adsorption_rev_fcc (1.9013828016423706E-002). Occurred 588 times (too slow). StiffCoeffNew/Old = 5.5231560891938249              
+     Elementary step 15 - O2_adsorption_fwd_hcp (3.6891395271053930E-002). Occurred 497 times (too slow). StiffCoeffNew/Old = 6.4788732394366200              
+     Elementary step 16 - O2_adsorption_rev_hcp (3.6891395271053930E-002). Occurred 520 times (too slow). StiffCoeffNew/Old = 6.4788732394366200              
+     Elementary step 17 - O2_diffusion_fwd (7.1504821182430872E-002). Occurred 6779 times (too fast). StiffCoeffNew/Old = 0.47499631214043364             
+     Elementary step 18 - O2_diffusion_rev (7.1504821182430872E-002). Occurred 6796 times (too fast). StiffCoeffNew/Old = 0.47499631214043364             
+
+Stiffness scaling possibly too aggressive at time t = 9.8276739712025840:
+   Applying a scale-up of the kinetic constants by a factor of 5.0000000000000000.
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+    Elementary step 7 - CO_diffusion_fwd (7.5711176281104825E-003). Occurred 5 times. PartEquil ratio = 0.38461538461538464. StiffCoeffNew/Old = 5.0000000000000000.
+    Elementary step 8 - CO_diffusion_rev (7.5711176281104825E-003). Occurred 8 times. PartEquil ratio = 0.61538461538461542. StiffCoeffNew/Old = 5.0000000000000000.
+
+Stiffness detected at time t = 9.8276739712025840:
+   The fastest non-equilibrated step is 20 - O2_dissociation_rev_fcc. Occurred 7 times (net count if reversible).
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+     Elementary step 5 - O_diffusion_fwd (2.9408117980767964E-008). Occurred 1410 times (too fast). StiffCoeffNew/Old = 0.69503546099290781             
+     Elementary step 6 - O_diffusion_rev (2.9408117980767964E-008). Occurred 1455 times (too fast). StiffCoeffNew/Old = 0.69503546099290781             
+     Elementary step 13 - O2_adsorption_fwd_fcc (1.1793386997528629E-002). Occurred 1583 times (too fast). StiffCoeffNew/Old = 0.62025316455696211             
+     Elementary step 14 - O2_adsorption_rev_fcc (1.1793386997528629E-002). Occurred 1580 times (too fast). StiffCoeffNew/Old = 0.62025316455696211             
+     Elementary step 17 - O2_diffusion_fwd (1.1215544935784612E-002). Occurred 6248 times (too fast). StiffCoeffNew/Old = 0.15685019206145967             
+     Elementary step 18 - O2_diffusion_rev (1.1215544935784612E-002). Occurred 6258 times (too fast). StiffCoeffNew/Old = 0.15685019206145967             
+
+Stiffness detected at time t = 9.9894524441342885:
+   The fastest non-equilibrated step is 20 - O2_dissociation_rev_fcc. Occurred 2 times (net count if reversible).
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+     Elementary step 5 - O_diffusion_fwd (5.0828845892685368E-008). Occurred 186 times (too slow). StiffCoeffNew/Old = 1.7283950617283950              
+     Elementary step 6 - O_diffusion_rev (5.0828845892685368E-008). Occurred 162 times (too slow). StiffCoeffNew/Old = 1.7283950617283950              
+     Elementary step 7 - CO_diffusion_fwd (2.0824292100893272E-004). Occurred 10180 times (too fast). StiffCoeffNew/Old = 2.7504911591355600E-002         
+     Elementary step 8 - CO_diffusion_rev (2.0824292100893272E-004). Occurred 10181 times (too fast). StiffCoeffNew/Old = 2.7504911591355600E-002         
+     Elementary step 17 - O2_diffusion_fwd (5.8154677444809101E-002). Occurred 54 times (too slow). StiffCoeffNew/Old = 5.1851851851851851              
+     Elementary step 18 - O2_diffusion_rev (5.8154677444809101E-002). Occurred 55 times (too slow). StiffCoeffNew/Old = 5.1851851851851851              
+
+Stiffness detected at time t = 11.380571237204441:
+   The fastest non-equilibrated step is 20 - O2_dissociation_rev_fcc. Occurred 14 times (net count if reversible).
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+     Elementary step 5 - O_diffusion_fwd (3.3386239259270544E-008). Occurred 2984 times (too fast). StiffCoeffNew/Old = 0.65683646112600524             
+     Elementary step 6 - O_diffusion_rev (3.3386239259270544E-008). Occurred 3005 times (too fast). StiffCoeffNew/Old = 0.65683646112600524             
+     Elementary step 17 - O2_diffusion_fwd (9.3505469886649581E-002). Occurred 1219 times (too slow). StiffCoeffNew/Old = 1.6078753076292043              
+     Elementary step 18 - O2_diffusion_rev (9.3505469886649581E-002). Occurred 1225 times (too slow). StiffCoeffNew/Old = 1.6078753076292043              
+
+Stiffness scaling possibly too aggressive at time t = 11.383734244031729:
+   Applying a scale-up of the kinetic constants by a factor of 5.0000000000000000.
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+    Elementary step 5 - O_diffusion_fwd (1.6693119629635271E-007). Occurred 1 times. PartEquil ratio = 0.14285714285714285. StiffCoeffNew/Old = 5.0000000000000000.
+    Elementary step 6 - O_diffusion_rev (1.6693119629635271E-007). Occurred 6 times. PartEquil ratio = 0.85714285714285710. StiffCoeffNew/Old = 5.0000000000000000.
+    Elementary step 13 - O2_adsorption_fwd_fcc (5.8966934987643146E-002). Occurred 3 times. PartEquil ratio = 0.42857142857142855. StiffCoeffNew/Old = 5.0000000000000000.
+    Elementary step 14 - O2_adsorption_rev_fcc (5.8966934987643146E-002). Occurred 4 times. PartEquil ratio = 0.57142857142857140. StiffCoeffNew/Old = 5.0000000000000000.
+
+Stiffness detected at time t = 11.383734244031729:
+   The fastest non-equilibrated step is 6 - O_diffusion_rev. Occurred 5 times (net count if reversible).
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+     Elementary step 15 - O2_adsorption_fwd_hcp (1.0000000000000000). Occurred 5 times (too slow). StiffCoeffNew/Old = 27.106592002082103              
+     Elementary step 16 - O2_adsorption_rev_hcp (1.0000000000000000). Occurred 5 times (too slow). StiffCoeffNew/Old = 27.106592002082103              
+     Elementary step 17 - O2_diffusion_fwd (5.9584732745247794E-003). Occurred 10985 times (too fast). StiffCoeffNew/Old = 6.3723258989531170E-002         
+     Elementary step 18 - O2_diffusion_rev (5.9584732745247794E-003). Occurred 10986 times (too fast). StiffCoeffNew/Old = 6.3723258989531170E-002         
+
+Stiffness scaling possibly too aggressive at time t = 11.587197403254583:
+   Applying a scale-up of the kinetic constants by a factor of 5.0000000000000000.
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+    Elementary step 17 - O2_diffusion_fwd (2.9792366372623898E-002). Occurred 4 times. PartEquil ratio = 0.44444444444444442. StiffCoeffNew/Old = 5.0000000000000000.
+    Elementary step 18 - O2_diffusion_rev (2.9792366372623898E-002). Occurred 5 times. PartEquil ratio = 0.55555555555555558. StiffCoeffNew/Old = 5.0000000000000000.
+
+Stiffness detected at time t = 11.587197403254583:
+   The fastest non-equilibrated step is 18 - O2_diffusion_rev. Occurred 1 times (net count if reversible).
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+     Elementary step 5 - O_diffusion_fwd (1.7799213618803792E-008). Occurred 1313 times (too fast). StiffCoeffNew/Old = 0.10662604722010663             
+     Elementary step 6 - O_diffusion_rev (1.7799213618803792E-008). Occurred 1329 times (too fast). StiffCoeffNew/Old = 0.10662604722010663             
+     Elementary step 13 - O2_adsorption_fwd_fcc (7.1105692491559352E-003). Occurred 1161 times (too fast). StiffCoeffNew/Old = 0.12058570198105083             
+     Elementary step 14 - O2_adsorption_rev_fcc (7.1105692491559352E-003). Occurred 1161 times (too fast). StiffCoeffNew/Old = 0.12058570198105083             
+     Elementary step 15 - O2_adsorption_fwd_hcp (1.6650808753568030E-002). Occurred 8408 times (too fast). StiffCoeffNew/Old = 1.6650808753568030E-002         
+     Elementary step 16 - O2_adsorption_rev_hcp (1.6650808753568030E-002). Occurred 8410 times (too fast). StiffCoeffNew/Old = 1.6650808753568030E-002         
+
+Stiffness detected at time t = 13.384079800860206:
+   The fastest non-equilibrated step is 20 - O2_dissociation_rev_fcc. Occurred 17 times (net count if reversible).
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+     Elementary step 5 - O_diffusion_fwd (3.3408618622044971E-008). Occurred 1287 times (too slow). StiffCoeffNew/Old = 1.8769716088328074              
+     Elementary step 6 - O_diffusion_rev (3.3408618622044971E-008). Occurred 1268 times (too slow). StiffCoeffNew/Old = 1.8769716088328074              
+     Elementary step 7 - CO_diffusion_fwd (8.9043864894225636E-005). Occurred 5567 times (too fast). StiffCoeffNew/Old = 0.42759611929572405             
+     Elementary step 8 - CO_diffusion_rev (8.9043864894225636E-005). Occurred 5566 times (too fast). StiffCoeffNew/Old = 0.42759611929572405             
+     Elementary step 13 - O2_adsorption_fwd_fcc (1.2526391423383512E-002). Occurred 1351 times (too slow). StiffCoeffNew/Old = 1.7616580310880827              
+     Elementary step 14 - O2_adsorption_rev_fcc (1.2526391423383512E-002). Occurred 1377 times (too slow). StiffCoeffNew/Old = 1.7616580310880827              
+     Elementary step 15 - O2_adsorption_fwd_hcp (2.9573824502605900E-002). Occurred 1344 times (too slow). StiffCoeffNew/Old = 1.7761194029850744              
+     Elementary step 16 - O2_adsorption_rev_hcp (2.9573824502605900E-002). Occurred 1340 times (too slow). StiffCoeffNew/Old = 1.7761194029850744              
+     Elementary step 17 - O2_diffusion_fwd (0.15150818796334378). Occurred 477 times (too slow). StiffCoeffNew/Old = 5.0854700854700861              
+     Elementary step 18 - O2_diffusion_rev (0.15150818796334378). Occurred 468 times (too slow). StiffCoeffNew/Old = 5.0854700854700861              
+
+Stiffness detected at time t = 13.524315127849958:
+   The fastest non-equilibrated step is 20 - O2_dissociation_rev_fcc. Occurred 2 times (net count if reversible).
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+     Elementary step 7 - CO_diffusion_fwd (4.1973539007379087E-005). Occurred 594 times (too fast). StiffCoeffNew/Old = 0.47138047138047140             
+     Elementary step 8 - CO_diffusion_rev (4.1973539007379087E-005). Occurred 595 times (too fast). StiffCoeffNew/Old = 0.47138047138047140             
+     Elementary step 17 - O2_diffusion_fwd (4.3734322298697179E-003). Occurred 9700 times (too fast). StiffCoeffNew/Old = 2.8865979381443300E-002         
+     Elementary step 18 - O2_diffusion_rev (4.3734322298697179E-003). Occurred 9703 times (too fast). StiffCoeffNew/Old = 2.8865979381443300E-002         
+
+Stiffness detected at time t = 15.464873123968740:
+   The fastest non-equilibrated step is 20 - O2_dissociation_rev_fcc. Occurred 11 times (net count if reversible).
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+     Elementary step 5 - O_diffusion_fwd (2.0416378046805261E-008). Occurred 2520 times (too fast). StiffCoeffNew/Old = 0.61111111111111116             
+     Elementary step 6 - O_diffusion_rev (2.0416378046805261E-008). Occurred 2528 times (too fast). StiffCoeffNew/Old = 0.61111111111111116             
+     Elementary step 7 - CO_diffusion_fwd (3.2319625035681900E-002). Occurred 2 times (too slow). StiffCoeffNew/Old = 770.00000000000000              
+     Elementary step 8 - CO_diffusion_rev (3.2319625035681900E-002). Occurred 2 times (too slow). StiffCoeffNew/Old = 770.00000000000000              
+     Elementary step 13 - O2_adsorption_fwd_fcc (6.3082546736463732E-003). Occurred 3058 times (too fast). StiffCoeffNew/Old = 0.50359712230215825             
+     Elementary step 14 - O2_adsorption_rev_fcc (6.3082546736463732E-003). Occurred 3066 times (too fast). StiffCoeffNew/Old = 0.50359712230215825             
+     Elementary step 15 - O2_adsorption_fwd_hcp (1.5480519963974535E-002). Occurred 2942 times (too fast). StiffCoeffNew/Old = 0.52345343303874914             
+     Elementary step 16 - O2_adsorption_rev_hcp (1.5480519963974535E-002). Occurred 2948 times (too fast). StiffCoeffNew/Old = 0.52345343303874914             
+
+Stiffness detected at time t = 17.518264884725969:
+   The fastest non-equilibrated step is 20 - O2_dissociation_rev_fcc. Occurred 11 times (net count if reversible).
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+     Elementary step 7 - CO_diffusion_fwd (1.0924544019962713E-002). Occurred 4557 times (too fast). StiffCoeffNew/Old = 0.33801580333625986             
+     Elementary step 8 - CO_diffusion_rev (1.0924544019962713E-002). Occurred 4556 times (too fast). StiffCoeffNew/Old = 0.33801580333625986             
+     Elementary step 17 - O2_diffusion_fwd (4.9889523214810119E-002). Occurred 136 times (too slow). StiffCoeffNew/Old = 11.407407407407408              
+     Elementary step 18 - O2_diffusion_rev (4.9889523214810119E-002). Occurred 135 times (too slow). StiffCoeffNew/Old = 11.407407407407408              
+
+Stiffness detected at time t = 19.467327098078780:
+   The fastest non-equilibrated step is 20 - O2_dissociation_rev_fcc. Occurred 12 times (net count if reversible).
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+     Elementary step 17 - O2_diffusion_fwd (2.7462122870537679E-002). Occurred 3052 times (too fast). StiffCoeffNew/Old = 0.55045871559633019             
+     Elementary step 18 - O2_diffusion_rev (2.7462122870537679E-002). Occurred 3058 times (too fast). StiffCoeffNew/Old = 0.55045871559633019             
+
+Stiffness scaling possibly too aggressive at time t = 19.470857406732001:
+   Applying a scale-up of the kinetic constants by a factor of 5.0000000000000000.
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+    Elementary step 5 - O_diffusion_fwd (1.0208189023402631E-007). Occurred 3 times. PartEquil ratio = 0.37500000000000000. StiffCoeffNew/Old = 5.0000000000000000.
+    Elementary step 6 - O_diffusion_rev (1.0208189023402631E-007). Occurred 5 times. PartEquil ratio = 0.62500000000000000. StiffCoeffNew/Old = 5.0000000000000000.
+    Elementary step 15 - O2_adsorption_fwd_hcp (7.7402599819872672E-002). Occurred 3 times. PartEquil ratio = 0.42857142857142855. StiffCoeffNew/Old = 5.0000000000000000.
+    Elementary step 16 - O2_adsorption_rev_hcp (7.7402599819872672E-002). Occurred 4 times. PartEquil ratio = 0.57142857142857140. StiffCoeffNew/Old = 5.0000000000000000.
+    Elementary step 17 - O2_diffusion_fwd (0.13731061435268840). Occurred 0 times. PartEquil ratio = 0.0000000000000000. StiffCoeffNew/Old = 5.0000000000000000.
+    Elementary step 18 - O2_diffusion_rev (0.13731061435268840). Occurred 1 times. PartEquil ratio = 1.0000000000000000. StiffCoeffNew/Old = 5.0000000000000000.
+
+Stiffness detected at time t = 19.470857406732001:
+   The fastest non-equilibrated step is 6 - O_diffusion_rev. Occurred 2 times (net count if reversible).
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+     Elementary step 7 - CO_diffusion_fwd (2.7848437050159865E-004). Occurred 10985 times (too fast). StiffCoeffNew/Old = 2.5491624180626365E-002         
+     Elementary step 8 - CO_diffusion_rev (2.7848437050159865E-004). Occurred 10984 times (too fast). StiffCoeffNew/Old = 2.5491624180626365E-002         
+     Elementary step 13 - O2_adsorption_fwd_fcc (0.25233018694585491). Occurred 7 times (too slow). StiffCoeffNew/Old = 40.000000000000000              
+     Elementary step 14 - O2_adsorption_rev_fcc (0.25233018694585491). Occurred 7 times (too slow). StiffCoeffNew/Old = 40.000000000000000              
+
+Stiffness detected at time t = 19.686547621705571:
+   All elementary processes that have occurred in the past interval appear as fast and quasi-equilibrated.
+   The slowest equilibrated step is 18/17 - O2_diffusion_rev/O2_diffusion_fwd. Occurred 9/10 times. Stiffness coefficient: 0.13731061435268840.
+   The fastest equilibrated step is 14/13 - O2_adsorption_rev_fcc/O2_adsorption_fwd_fcc. Occurred 8540/8539 times. Stiffness coefficient: 0.25233018694585491.
+   Since the scaling coefficient of the fastest quasi-equilibrated step is below the threshold of 1.0000000000000000, any newly computed scaling coefficients above the threshold have been automatically mapped to 1.
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+     Elementary step 1 - CO_adsorption_fwd_fcc (0.13043478260869565). Occurred 69 times (too fast). StiffCoeffNew/Old = 0.13043478260869565             
+     Elementary step 2 - CO_adsorption_rev_fcc (0.13043478260869565). Occurred 70 times (too fast). StiffCoeffNew/Old = 0.13043478260869565             
+     Elementary step 3 - CO_adsorption_fwd_hcp (0.16071428571428573). Occurred 56 times (too fast). StiffCoeffNew/Old = 0.16071428571428573             
+     Elementary step 4 - CO_adsorption_rev_hcp (0.16071428571428573). Occurred 56 times (too fast). StiffCoeffNew/Old = 0.16071428571428573             
+     Elementary step 5 - O_diffusion_fwd (1.0950381550729879E-009). Occurred 839 times (too fast). StiffCoeffNew/Old = 1.0727056019070322E-002         
+     Elementary step 6 - O_diffusion_rev (1.0950381550729879E-009). Occurred 792 times (too fast). StiffCoeffNew/Old = 1.0727056019070322E-002         
+     Elementary step 7 - CO_diffusion_fwd (5.6070678624482953E-006). Occurred 447 times (too fast). StiffCoeffNew/Old = 2.0134228187919465E-002         
+     Elementary step 8 - CO_diffusion_rev (5.6070678624482953E-006). Occurred 448 times (too fast). StiffCoeffNew/Old = 2.0134228187919465E-002         
+     Elementary step 13 - O2_adsorption_fwd_fcc (2.6595288470695566E-004). Occurred 8539 times (too fast). StiffCoeffNew/Old = 1.0539875863684273E-003         
+     Elementary step 14 - O2_adsorption_rev_fcc (2.6595288470695566E-004). Occurred 8540 times (too fast). StiffCoeffNew/Old = 1.0539875863684273E-003         
+     Elementary step 15 - O2_adsorption_fwd_hcp (6.5533715745894072E-004). Occurred 1063 times (too fast). StiffCoeffNew/Old = 8.4666039510818431E-003         
+     Elementary step 16 - O2_adsorption_rev_hcp (6.5533715745894072E-004). Occurred 1062 times (too fast). StiffCoeffNew/Old = 8.4666039510818431E-003         
+
+Stiffness scaling possibly too aggressive at time t = 20.713483073995977:
+   Applying a scale-up of the kinetic constants by a factor of 5.0000000000000000.
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+    Elementary step 5 - O_diffusion_fwd (5.4751907753649391E-009). Occurred 37 times. PartEquil ratio = 0.44578313253012047. StiffCoeffNew/Old = 5.0000000000000000.
+    Elementary step 6 - O_diffusion_rev (5.4751907753649391E-009). Occurred 46 times. PartEquil ratio = 0.55421686746987953. StiffCoeffNew/Old = 5.0000000000000000.
+    Elementary step 7 - CO_diffusion_fwd (2.8035339312241477E-005). Occurred 1 times. PartEquil ratio = 0.33333333333333331. StiffCoeffNew/Old = 5.0000000000000000.
+    Elementary step 8 - CO_diffusion_rev (2.8035339312241477E-005). Occurred 2 times. PartEquil ratio = 0.66666666666666663. StiffCoeffNew/Old = 5.0000000000000000.
+
+Stiffness detected at time t = 20.713483073995977:
+   The fastest non-equilibrated step is 6 - O_diffusion_rev. Occurred 9 times (net count if reversible).
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+     Elementary step 1 - CO_adsorption_fwd_fcc (1.0000000000000000). Occurred 50 times (too slow). StiffCoeffNew/Old = 7.6666666666666670              
+     Elementary step 2 - CO_adsorption_rev_fcc (1.0000000000000000). Occurred 50 times (too slow). StiffCoeffNew/Old = 7.6666666666666670              
+     Elementary step 3 - CO_adsorption_fwd_hcp (1.0000000000000000). Occurred 51 times (too slow). StiffCoeffNew/Old = 6.2222222222222214              
+     Elementary step 4 - CO_adsorption_rev_hcp (1.0000000000000000). Occurred 50 times (too slow). StiffCoeffNew/Old = 6.2222222222222214              
+     Elementary step 13 - O2_adsorption_fwd_fcc (7.4466807717947581E-003). Occurred 45 times (too slow). StiffCoeffNew/Old = 28.000000000000000              
+     Elementary step 14 - O2_adsorption_rev_fcc (7.4466807717947581E-003). Occurred 49 times (too slow). StiffCoeffNew/Old = 28.000000000000000              
+     Elementary step 15 - O2_adsorption_fwd_hcp (1.6851526906087048E-002). Occurred 49 times (too slow). StiffCoeffNew/Old = 25.714285714285715              
+     Elementary step 16 - O2_adsorption_rev_hcp (1.6851526906087048E-002). Occurred 52 times (too slow). StiffCoeffNew/Old = 25.714285714285715              
+     Elementary step 17 - O2_diffusion_fwd (1.6091087619455675E-002). Occurred 10752 times (too fast). StiffCoeffNew/Old = 0.11718750000000001             
+     Elementary step 18 - O2_diffusion_rev (1.6091087619455675E-002). Occurred 10755 times (too fast). StiffCoeffNew/Old = 0.11718750000000001             
+
+Stiffness detected at time t = 22.509628695074600:
+   The fastest non-equilibrated step is 20 - O2_dissociation_rev_fcc. Occurred 10 times (net count if reversible).
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+     Elementary step 5 - O_diffusion_fwd (2.3157906602752008E-008). Occurred 331 times (too slow). StiffCoeffNew/Old = 4.2296072507552873              
+     Elementary step 6 - O_diffusion_rev (2.3157906602752008E-008). Occurred 362 times (too slow). StiffCoeffNew/Old = 4.2296072507552873              
+     Elementary step 7 - CO_diffusion_fwd (1.8779653127817255E-004). Occurred 212 times (too slow). StiffCoeffNew/Old = 6.6985645933014348              
+     Elementary step 8 - CO_diffusion_rev (1.8779653127817255E-004). Occurred 209 times (too slow). StiffCoeffNew/Old = 6.6985645933014348              
+     Elementary step 13 - O2_adsorption_fwd_fcc (4.2517753183167455E-003). Occurred 2458 times (too fast). StiffCoeffNew/Old = 0.57096247960848279             
+     Elementary step 14 - O2_adsorption_rev_fcc (4.2517753183167455E-003). Occurred 2452 times (too fast). StiffCoeffNew/Old = 0.57096247960848279             
+     Elementary step 15 - O2_adsorption_fwd_hcp (9.9126628859335566E-003). Occurred 2380 times (too fast). StiffCoeffNew/Old = 0.58823529411764697             
+     Elementary step 16 - O2_adsorption_rev_hcp (9.9126628859335566E-003). Occurred 2397 times (too fast). StiffCoeffNew/Old = 0.58823529411764697             
+     Elementary step 17 - O2_diffusion_fwd (4.9828627885949882E-003). Occurred 4521 times (too fast). StiffCoeffNew/Old = 0.30966600309665998             
+     Elementary step 18 - O2_diffusion_rev (4.9828627885949882E-003). Occurred 4537 times (too fast). StiffCoeffNew/Old = 0.30966600309665998             
+
+Stiffness detected at time t = 25.839313729639770:
+   The fastest non-equilibrated step is 20 - O2_dissociation_rev_fcc. Occurred 8 times (net count if reversible).
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+     Elementary step 5 - O_diffusion_fwd (8.9314240341192318E-009). Occurred 2911 times (too fast). StiffCoeffNew/Old = 0.38567493112947659             
+     Elementary step 6 - O_diffusion_rev (8.9314240341192318E-009). Occurred 2904 times (too fast). StiffCoeffNew/Old = 0.38567493112947659             
+     Elementary step 7 - CO_diffusion_fwd (3.8806663289954474E-004). Occurred 545 times (too slow). StiffCoeffNew/Old = 2.0664206642066421              
+     Elementary step 8 - CO_diffusion_rev (3.8806663289954474E-004). Occurred 542 times (too slow). StiffCoeffNew/Old = 2.0664206642066421              
+     Elementary step 13 - O2_adsorption_fwd_fcc (1.7526640988276610E-003). Occurred 2717 times (too fast). StiffCoeffNew/Old = 0.41221935958778066             
+     Elementary step 14 - O2_adsorption_rev_fcc (1.7526640988276610E-003). Occurred 2731 times (too fast). StiffCoeffNew/Old = 0.41221935958778066             
+     Elementary step 15 - O2_adsorption_fwd_hcp (4.2488260360679618E-003). Occurred 2613 times (too fast). StiffCoeffNew/Old = 0.42862610026789133             
+     Elementary step 16 - O2_adsorption_rev_hcp (4.2488260360679618E-003). Occurred 2615 times (too fast). StiffCoeffNew/Old = 0.42862610026789133             
+     Elementary step 17 - O2_diffusion_fwd (4.3600049400206148E-002). Occurred 134 times (too slow). StiffCoeffNew/Old = 8.7500000000000000              
+     Elementary step 18 - O2_diffusion_rev (4.3600049400206148E-002). Occurred 128 times (too slow). StiffCoeffNew/Old = 8.7500000000000000              
+
+Stiffness detected at time t = 26.855579788703441:
+   The fastest non-equilibrated step is 20 - O2_dissociation_rev_fcc. Occurred 5 times (net count if reversible).
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+     Elementary step 5 - O_diffusion_fwd (1.8551919358704636E-008). Occurred 337 times (too slow). StiffCoeffNew/Old = 2.0771513353115729              
+     Elementary step 6 - O_diffusion_rev (1.8551919358704636E-008). Occurred 358 times (too slow). StiffCoeffNew/Old = 2.0771513353115729              
+     Elementary step 7 - CO_diffusion_fwd (3.8449631002078040E-005). Occurred 7066 times (too fast). StiffCoeffNew/Old = 9.9079971691436675E-002         
+     Elementary step 8 - CO_diffusion_rev (3.8449631002078040E-005). Occurred 7065 times (too fast). StiffCoeffNew/Old = 9.9079971691436675E-002         
+     Elementary step 13 - O2_adsorption_fwd_fcc (3.7177723308465535E-003). Occurred 331 times (too slow). StiffCoeffNew/Old = 2.1212121212121211              
+     Elementary step 14 - O2_adsorption_rev_fcc (3.7177723308465535E-003). Occurred 330 times (too slow). StiffCoeffNew/Old = 2.1212121212121211              
+     Elementary step 15 - O2_adsorption_fwd_hcp (8.5711188047480503E-003). Occurred 347 times (too slow). StiffCoeffNew/Old = 2.0172910662824211              
+     Elementary step 16 - O2_adsorption_rev_hcp (8.5711188047480503E-003). Occurred 357 times (too slow). StiffCoeffNew/Old = 2.0172910662824211              
+     Elementary step 17 - O2_diffusion_fwd (1.3269580252236655E-002). Occurred 2300 times (too fast). StiffCoeffNew/Old = 0.30434782608695654             
+     Elementary step 18 - O2_diffusion_rev (1.3269580252236655E-002). Occurred 2306 times (too fast). StiffCoeffNew/Old = 0.30434782608695654             
+
+Stiffness detected at time t = 29.048776438581864:
+   The fastest non-equilibrated step is 20 - O2_dissociation_rev_fcc. Occurred 10 times (net count if reversible).
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+     Elementary step 7 - CO_diffusion_fwd (2.2475775951110339E-005). Occurred 2395 times (too fast). StiffCoeffNew/Old = 0.58455114822546983             
+     Elementary step 8 - CO_diffusion_rev (2.2475775951110339E-005). Occurred 2399 times (too fast). StiffCoeffNew/Old = 0.58455114822546983             
+     Elementary step 17 - O2_diffusion_fwd (9.2195594804621930E-003). Occurred 2015 times (too fast). StiffCoeffNew/Old = 0.69478908188585620             
+     Elementary step 18 - O2_diffusion_rev (9.2195594804621930E-003). Occurred 2024 times (too fast). StiffCoeffNew/Old = 0.69478908188585620             
+
+Stiffness detected at time t = 31.695512699054426:
+   The fastest non-equilibrated step is 20 - O2_dissociation_rev_fcc. Occurred 4 times (net count if reversible).
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+     Elementary step 1 - CO_adsorption_fwd_fcc (0.60737527114967460). Occurred 922 times (too fast). StiffCoeffNew/Old = 0.60737527114967460             
+     Elementary step 2 - CO_adsorption_rev_fcc (0.60737527114967460). Occurred 924 times (too fast). StiffCoeffNew/Old = 0.60737527114967460             
+     Elementary step 3 - CO_adsorption_fwd_hcp (0.67469879518072284). Occurred 832 times (too fast). StiffCoeffNew/Old = 0.67469879518072284             
+     Elementary step 4 - CO_adsorption_rev_hcp (0.67469879518072284). Occurred 830 times (too fast). StiffCoeffNew/Old = 0.67469879518072284             
+     Elementary step 5 - O_diffusion_fwd (5.9844901157111732E-009). Occurred 1736 times (too fast). StiffCoeffNew/Old = 0.32258064516129031             
+     Elementary step 6 - O_diffusion_rev (5.9844901157111732E-009). Occurred 1778 times (too fast). StiffCoeffNew/Old = 0.32258064516129031             
+     Elementary step 7 - CO_diffusion_fwd (5.9594860476428923E-006). Occurred 2112 times (too fast). StiffCoeffNew/Old = 0.26515151515151514             
+     Elementary step 8 - CO_diffusion_rev (5.9594860476428923E-006). Occurred 2114 times (too fast). StiffCoeffNew/Old = 0.26515151515151514             
+     Elementary step 13 - O2_adsorption_fwd_fcc (9.5153222361703379E-004). Occurred 2188 times (too fast). StiffCoeffNew/Old = 0.25594149908592323             
+     Elementary step 14 - O2_adsorption_rev_fcc (9.5153222361703379E-004). Occurred 2190 times (too fast). StiffCoeffNew/Old = 0.25594149908592323             
+     Elementary step 15 - O2_adsorption_fwd_hcp (2.2910866494791926E-003). Occurred 2095 times (too fast). StiffCoeffNew/Old = 0.26730310262529833             
+     Elementary step 16 - O2_adsorption_rev_hcp (2.2910866494791926E-003). Occurred 2100 times (too fast). StiffCoeffNew/Old = 0.26730310262529833             
+     Elementary step 17 - O2_diffusion_fwd (4.7628720563273321E-003). Occurred 1084 times (too fast). StiffCoeffNew/Old = 0.51660516605166051             
+     Elementary step 18 - O2_diffusion_rev (4.7628720563273321E-003). Occurred 1085 times (too fast). StiffCoeffNew/Old = 0.51660516605166051             
+
+Stiffness detected at time t = 35.950426549574871:
+   The fastest non-equilibrated step is 20 - O2_dissociation_rev_fcc. Occurred 12 times (net count if reversible).
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+     Elementary step 1 - CO_adsorption_fwd_fcc (1.0000000000000000). Occurred 957 times (too slow). StiffCoeffNew/Old = 1.6464285714285716              
+     Elementary step 2 - CO_adsorption_rev_fcc (1.0000000000000000). Occurred 953 times (too slow). StiffCoeffNew/Old = 1.6464285714285716              
+     Elementary step 3 - CO_adsorption_fwd_hcp (1.0000000000000000). Occurred 892 times (too slow). StiffCoeffNew/Old = 1.4821428571428572              
+     Elementary step 4 - CO_adsorption_rev_hcp (1.0000000000000000). Occurred 892 times (too slow). StiffCoeffNew/Old = 1.4821428571428572              
+     Elementary step 5 - O_diffusion_fwd (1.0904493920167864E-008). Occurred 922 times (too slow). StiffCoeffNew/Old = 1.8221258134490239              
+     Elementary step 6 - O_diffusion_rev (1.0904493920167864E-008). Occurred 930 times (too slow). StiffCoeffNew/Old = 1.8221258134490239              
+     Elementary step 7 - CO_diffusion_fwd (3.4170431945529210E-005). Occurred 293 times (too slow). StiffCoeffNew/Old = 5.7337883959044369              
+     Elementary step 8 - CO_diffusion_rev (3.4170431945529210E-005). Occurred 293 times (too slow). StiffCoeffNew/Old = 5.7337883959044369              
+     Elementary step 13 - O2_adsorption_fwd_fcc (1.5580644597237979E-003). Occurred 1026 times (too slow). StiffCoeffNew/Old = 1.6374269005847952              
+     Elementary step 14 - O2_adsorption_rev_fcc (1.5580644597237979E-003). Occurred 1032 times (too slow). StiffCoeffNew/Old = 1.6374269005847952              
+     Elementary step 15 - O2_adsorption_fwd_hcp (3.9436737409068064E-003). Occurred 976 times (too slow). StiffCoeffNew/Old = 1.7213114754098358              
+     Elementary step 16 - O2_adsorption_rev_hcp (3.9436737409068064E-003). Occurred 991 times (too slow). StiffCoeffNew/Old = 1.7213114754098358              
+     Elementary step 17 - O2_diffusion_fwd (1.3552887965159078E-003). Occurred 5904 times (too fast). StiffCoeffNew/Old = 0.28455284552845533             
+     Elementary step 18 - O2_diffusion_rev (1.3552887965159078E-003). Occurred 5910 times (too fast). StiffCoeffNew/Old = 0.28455284552845533             
+
+Stiffness detected at time t = 41.299464114165779:
+   The fastest non-equilibrated step is 20 - O2_dissociation_rev_fcc. Occurred 7 times (net count if reversible).
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+     Elementary step 1 - CO_adsorption_fwd_fcc (0.49172102358253889). Occurred 1993 times (too fast). StiffCoeffNew/Old = 0.49172102358253889             
+     Elementary step 2 - CO_adsorption_rev_fcc (0.49172102358253889). Occurred 1994 times (too fast). StiffCoeffNew/Old = 0.49172102358253889             
+     Elementary step 3 - CO_adsorption_fwd_hcp (0.59071729957805907). Occurred 1660 times (too fast). StiffCoeffNew/Old = 0.59071729957805907             
+     Elementary step 4 - CO_adsorption_rev_hcp (0.59071729957805907). Occurred 1659 times (too fast). StiffCoeffNew/Old = 0.59071729957805907             
+     Elementary step 5 - O_diffusion_fwd (5.3192653269111530E-009). Occurred 2020 times (too fast). StiffCoeffNew/Old = 0.48780487804878048             
+     Elementary step 6 - O_diffusion_rev (5.3192653269111530E-009). Occurred 2009 times (too fast). StiffCoeffNew/Old = 0.48780487804878048             
+     Elementary step 7 - CO_diffusion_fwd (2.8140355719847584E-004). Occurred 119 times (too slow). StiffCoeffNew/Old = 8.2352941176470580              
+     Elementary step 8 - CO_diffusion_rev (2.8140355719847584E-004). Occurred 120 times (too slow). StiffCoeffNew/Old = 8.2352941176470580              
+     Elementary step 13 - O2_adsorption_fwd_fcc (6.6099704351918703E-004). Occurred 2310 times (too fast). StiffCoeffNew/Old = 0.42424242424242425             
+     Elementary step 14 - O2_adsorption_rev_fcc (6.6099704351918703E-004). Occurred 2317 times (too fast). StiffCoeffNew/Old = 0.42424242424242425             
+     Elementary step 15 - O2_adsorption_fwd_hcp (1.5073323970704643E-003). Occurred 2564 times (too fast). StiffCoeffNew/Old = 0.38221528861154447             
+     Elementary step 16 - O2_adsorption_rev_hcp (1.5073323970704643E-003). Occurred 2569 times (too fast). StiffCoeffNew/Old = 0.38221528861154447             
+     Elementary step 17 - O2_diffusion_fwd (4.0867169864171986E-003). Occurred 325 times (too slow). StiffCoeffNew/Old = 3.0153846153846153              
+     Elementary step 18 - O2_diffusion_rev (4.0867169864171986E-003). Occurred 326 times (too slow). StiffCoeffNew/Old = 3.0153846153846153              
+
+Stiffness detected at time t = 43.765750458532068:
+   The fastest non-equilibrated step is 20 - O2_dissociation_rev_fcc. Occurred 3 times (net count if reversible).
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+     Elementary step 7 - CO_diffusion_fwd (1.4784775334420797E-005). Occurred 7994 times (too fast). StiffCoeffNew/Old = 5.2539404553415062E-002         
+     Elementary step 8 - CO_diffusion_rev (1.4784775334420797E-005). Occurred 7994 times (too fast). StiffCoeffNew/Old = 5.2539404553415062E-002         
+
+Stiffness detected at time t = 48.290137208505591:
+   The fastest non-equilibrated step is 20 - O2_dissociation_rev_fcc. Occurred 12 times (net count if reversible).
+   The following rate constants will be adjusted by the scaling coefficients in parenthesis (PEcur/PEori).
+   Scaling coefficients above the threshold of 1.0000000000000000 have been automatically mapped to 1.
+     Elementary step 1 - CO_adsorption_fwd_fcc (0.98696692905455818). Occurred 837 times (too slow). StiffCoeffNew/Old = 2.0071684587813619              
+     Elementary step 2 - CO_adsorption_rev_fcc (0.98696692905455818). Occurred 844 times (too slow). StiffCoeffNew/Old = 2.0071684587813619              
+     Elementary step 3 - CO_adsorption_fwd_hcp (1.0000000000000000). Occurred 908 times (too slow). StiffCoeffNew/Old = 1.6928571428571428              
+     Elementary step 4 - CO_adsorption_rev_hcp (1.0000000000000000). Occurred 901 times (too slow). StiffCoeffNew/Old = 1.6928571428571428              
+     Elementary step 5 - O_diffusion_fwd (1.1005376538436869E-008). Occurred 812 times (too slow). StiffCoeffNew/Old = 2.0689655172413794              
+     Elementary step 6 - O_diffusion_rev (1.1005376538436869E-008). Occurred 832 times (too slow). StiffCoeffNew/Old = 2.0689655172413794              
+     Elementary step 7 - CO_diffusion_fwd (6.6734074588465714E-006). Occurred 3722 times (too fast). StiffCoeffNew/Old = 0.45137023105857066             
+     Elementary step 8 - CO_diffusion_rev (6.6734074588465714E-006). Occurred 3729 times (too fast). StiffCoeffNew/Old = 0.45137023105857066             
+     Elementary step 13 - O2_adsorption_fwd_fcc (1.1927766198842472E-003). Occurred 931 times (too slow). StiffCoeffNew/Old = 1.8045112781954886              
+     Elementary step 14 - O2_adsorption_rev_fcc (1.1927766198842472E-003). Occurred 946 times (too slow). StiffCoeffNew/Old = 1.8045112781954886              
+     Elementary step 15 - O2_adsorption_fwd_hcp (2.7950534515213906E-003). Occurred 907 times (too slow). StiffCoeffNew/Old = 1.8543046357615893              
+     Elementary step 16 - O2_adsorption_rev_hcp (2.7950534515213906E-003). Occurred 906 times (too slow). StiffCoeffNew/Old = 1.8543046357615893              
+     Elementary step 17 - O2_diffusion_fwd (2.4073227689975084E-003). Occurred 2855 times (too fast). StiffCoeffNew/Old = 0.58906030855539970             
+     Elementary step 18 - O2_diffusion_rev (2.4073227689975084E-003). Occurred 2852 times (too fast). StiffCoeffNew/Old = 0.58906030855539970             
+
+
+Simulation stopped:
+~~~~~~~~~~~~~~~~~~~
+ Current KMC time: 50.0005951
+ Events occurred:  1218767
+ Event frequency:  24375.0508
+
+Performance facts:
+~~~~~~~~~~~~~~~~~~
+
+Elapsed CPU time:         307357.750 seconds
+Elapsed clock time:       7785.48730 seconds
+Setup clock time:         3.84673190 seconds
+Simulation clock time:    7781.64062 seconds
+
+Clock time per KMC event: 6.38800301E-03 seconds
+Clock time per KMC time:  155.707886 seconds/KMCTimeUnits
+
+Events per clock hour:    563556
+KMC Dt per clock hour:    23.1202145 KMCTimeUnits
+
+Execution queue statistics:
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Number of insertions:             16273904
+Number of removals:               16194020
+Number of updates:               207744395
+
+Memory usage statistics:
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Used capacity of process queue:                   86202
+       ...out of max-allocated:                  921600  (   9.35% utilization )
+
+Used capacity of process-participation list:         23
+       ...out of max-allocated:                     200  (  11.50% utilization )
+
+Used capacity of cluster list:                   578462
+       ...out of max-allocated:                 2949120  (  19.61% utilization )
+
+Used capacity of cluster-participation list:        135
+       ...out of max-allocated:                     160  (  84.38% utilization )
+
+> Normal termination <
