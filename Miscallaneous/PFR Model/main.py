@@ -41,7 +41,7 @@ class MKModel:
         self.Thermo_Constraint='OFF'
         self.Keq_setting = 'pseudo'#Sets the Keq to be calculated straight from the rate constants
         self.Stoichiometric_numbers = self.Stoich_number_extract()
-        self.Keq = self.set_Keq() #Checks thermodynamic consistency        
+        # self.Keq = self.set_Keq() #Checks thermodynamic consistency        
   
         self.rate_const_correction = 'None' #Accounting for correction to the rate constants (i.e. enhancing the mean field approximation)
         self.BG_matrix='uniform' #Bragg williams constant matrix
@@ -375,7 +375,7 @@ class MKModel:
         else:
             return D
     #------------------------------------------------------------------------------------------------------------------------------      
-    def solve_coverage(self,t=[],initial_cov=[],method='BDF',Tf_eval=[],full_output=False,plot=False): #Function used for calculating (and plotting) single state transient coverages
+    def solve_coverage(self,t=[],initial_cov=[],method='BDF',Tf_eval=[],full_output=False,plot=False,isolate=None): #Function used for calculating (and plotting) single state transient coverages
         #Function used for solving the resulting ODEs and obtaining the corresponding surface coverages as a function of time
         if t==[]:  #Condition to make sure default time is what was set initially (from self.set_limits_of_integration()) and if a different time range is entered, it will be set as the default time limits of integration
             t=[self.Ti,self.Tf]  
@@ -412,15 +412,25 @@ class MKModel:
         solt = np.transpose(solve.t)
         
         self.label='coverages'
-        
+        all_species = list(self.Atomic.columns.values[1+len(self.P):])
+        if isolate == None:
+            Species = all_species
+        else:
+            Species = isolate
+            indexlist_species_to_plot = []
+            for i in Species:
+                index_in_list = all_species.index(i)
+                indexlist_species_to_plot.append(index_in_list)
+            sol = sol[:,indexlist_species_to_plot]
+
         # Plotting
         if plot==False:
             return sol,solt
         elif plot==True:
-            self.plotting(sol,solt,self.label)
+            self.plotting(sol,solt,self.label,Species)
             return sol,solt
     #------------------------------------------------------------------------------------------------------------------------------
-    def solve_rate_reaction(self,tf=None,Tf_eval=[],initial_coverage=[],plot=False): #Function used for calculating (and plotting) single state transient rates of reaction
+    def solve_rate_reaction(self,tf=None,Tf_eval=[],initial_coverage=[],plot=False,isolate=None): #Function used for calculating (and plotting) single state transient rates of reaction
         
         if tf==None: 
             tf=self.Tf
@@ -437,14 +447,25 @@ class MKModel:
                         
         rates_r = np.array(rates_r)
         
-        self.label='rates_p'
+        self.label='rates_r'
+        all_species = list(np.array(self.Stoich.iloc[:,0]))
+        if isolate == None:
+            Species = all_species
+        else:
+            Species = isolate
+            indexlist_species_to_plot = []
+            for i in Species:
+                index_in_list = all_species.index(i)
+                indexlist_species_to_plot.append(index_in_list)
+            rates_r = rates_r[:,indexlist_species_to_plot]
+
         if plot==False:
             return rates_r,covgt
         elif plot==True:
             self.plotting(rates_r,covgt,self.label)
             return rates_r,covgt
     #------------------------------------------------------------------------------------------------------------------------------
-    def solve_rate_production(self,tf=None,Tf_eval=[],initial_coverage=[],plot=False): #Function used for calculating (and plotting) single state transient rates of production
+    def solve_rate_production(self,tf=None,Tf_eval=[],initial_coverage=[],plot=False,isolate=None): #Function used for calculating (and plotting) single state transient rates of production
         
         if tf==None:
             tf=self.Tf
@@ -463,10 +484,21 @@ class MKModel:
         rates_p = np.array(rates_p)
         
         self.label='rates_p'
+        all_species = list(self.Atomic.columns.values[1:])
+        if isolate == None:
+            Species = all_species
+        else:
+            Species = isolate
+            indexlist_species_to_plot = []
+            for i in Species:
+                index_in_list = all_species.index(i)
+                indexlist_species_to_plot.append(index_in_list)
+            rates_p = rates_p[:,indexlist_species_to_plot]
+
         if plot==False:
             return rates_p,covgt
         elif plot==True:
-            self.plotting(rates_p,covgt,self.label)
+            self.plotting(rates_p,covgt,self.label,Species)
             return rates_p,covgt
     #------------------------------------------------------------------------------------------------------------------------------ 
     #Functions neccessary for calculating the steady state values (Needed for when attempting dynamic switching between pressures)
@@ -498,11 +530,11 @@ class MKModel:
                 msg = 'Warning: STEADY STATE MAY NOT HAVE BEEN REACHED. Difference in a set of last two rates of production terms is NOT less than 1e-7. Last terms are returned anyways.'
                 return (end,msg)
     #------------------------------------------------------------------------------------------------------------------------------
-    def get_SS_coverages(self,tf=None,Tf_eval=[],print_warning=True): #Function used for calculating the steady state coverages
+    def get_SS_coverages(self,tf=None,Tf_eval=[],print_warning=True,isolate=None): #Function used for calculating the steady state coverages
         if tf==None:
             tf=self.Tf
 
-        covg,covgt = self.solve_coverage(t=[self.Ti,tf],Tf_eval=Tf_eval)
+        covg,covgt = self.solve_coverage(t=[self.Ti,tf],Tf_eval=Tf_eval,isolate=isolate)
         
         SS,msg = self.check_SS(covg,feature='coverage')
 
@@ -510,18 +542,20 @@ class MKModel:
             print(msg)
         return SS
     #------------------------------------------------------------------------------------------------------------------------------    
-    def get_SS_rates_reaction(self,tf=None,Tf_eval=[]): #Function used for calculating the steady state rates of reaction
-        rates_r,time_r = self.solve_rate_reaction(tf=tf,Tf_eval=Tf_eval)
+    def get_SS_rates_reaction(self,tf=None,Tf_eval=[],print_warning=True,isolate=None): #Function used for calculating the steady state rates of reaction
+        rates_r,time_r = self.solve_rate_reaction(tf=tf,Tf_eval=Tf_eval,isolate=isolate)
         
         SS,msg = self.check_SS(rates_r,feature='rates_reaction')
-        print(msg)
+        if print_warning!=False:
+            print(msg)
         return SS
     #------------------------------------------------------------------------------------------------------------------------------
-    def get_SS_rates_production(self,tf=None,Tf_eval=[]): #Function used for calculating the steady state rates of production
-        rates_p,time_R = self.solve_rate_production(tf=tf,Tf_eval=Tf_eval)  
+    def get_SS_rates_production(self,tf=None,Tf_eval=[],print_warning=True,isolate=None): #Function used for calculating the steady state rates of production
+        rates_p,time_R = self.solve_rate_production(tf=tf,Tf_eval=Tf_eval,isolate=isolate)  
         
         SS,msg = self.check_SS(rates_p,feature='rates_production')
-        print(msg)
+        if print_warning!=False:
+            print(msg)
         return SS
     
     #------------------------------------------------------------------------------------------------------------------------------
@@ -736,28 +770,36 @@ class MKModel:
     #------------------------------------------------------------------------------------------------------------------------------
     #Function responsible for plotting
     #------------------------------------------------------------------------------------------------------------------------------    
-    def plotting(self,sol,solt,label):
+    def plotting(self,sol,solt,label,Species):
         fig = plt.figure()
         ax = fig.add_subplot(111)
 
-        
-        for i in np.arange(len(sol[0,:])):
-            ax.plot(solt, sol[:,i])
-            
         if label=='rates_p':     
-            ax.legend(self.Atomic.columns.values[1:],fontsize=10, loc='upper right',facecolor='white', edgecolor ='black', framealpha=1)
+            
+            for i in np.arange(len(sol[0,:])):                
+                ax.plot(solt, sol[:,i])
+
+            ax.legend(Species,fontsize=10, loc='best',facecolor='white', edgecolor ='black', framealpha=1)
             ax.set_xlabel('Time, t, [s]')
             ax.set_ylabel(r"Rates of Production, $R_i$")
             ax.set_title('Rates of production versus Time')
             
         elif label=='rates_r':
-            ax.legend(np.array(self.Stoich.iloc[:,0]),fontsize=10, loc='upper right',facecolor='white', edgecolor ='black', framealpha=1)
+
+            for i in np.arange(len(sol[0,:])):
+                ax.plot(solt, sol[:,i])
+
+            ax.legend(Species,fontsize=10, loc='best',facecolor='white', edgecolor ='black', framealpha=1)
             ax.set_xlabel('Time, t, [s]')
             ax.set_ylabel(r"Rates of Reaction, $r_i$")
             ax.set_title('Rates of reaction versus Time')
             
         elif label=='coverages':
-            ax.legend(self.Atomic.columns.values[1+len(self.P):],fontsize=10, loc='upper right',facecolor='white', edgecolor ='black', framealpha=1)
+
+            for i in np.arange(len(sol[0,:])):
+                ax.plot(solt, sol[:,i])
+
+            ax.legend(Species,fontsize=10, loc='best',facecolor='white', edgecolor ='black', framealpha=1)
             ax.set_xlabel('Time, t, [s]')
             ax.set_ylabel(r"Coverage, $\theta_i, [ML]$")
             ax.set_title('Coverages versus Time')
