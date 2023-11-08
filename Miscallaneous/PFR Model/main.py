@@ -29,15 +29,20 @@ class MKModel:
     def __init__(self,Atomic_csv,Stoich_csv,Param_csv): #Inputs necessary to initialize the MK Model
         self.Atomic = pd.read_csv(Atomic_csv)     #Opening/Reading the Atomic input file needed to be read
         self.Stoich = pd.read_csv(Stoich_csv)    #Opening/Reading the Stoichiometric input file needed to be read
-        self.Param = pd.read_csv(Param_csv)     #Opening/Reading the Parameter input file needed to be read         
-        
+        self.Param = pd.read_csv(Param_csv)     #Opening/Reading the Parameter input file needed to be read 
+
         self.check_massbalance(self.Atomic,self.Stoich) #Uses the stoich and atomic matrices to check that mass is conserved A*v=0
         
         self.dplace,self.rtol,self.atol = self.ODE_Tolerances(Dplace=None,reltol=None,abstol=None) #Controls decimal places - used for mp.dps in mpmath precision control #Specifying ODE Tolerance values
 
         self.k = self.kextract()    #Extracting the rate constants from the Param File (Note that format of the Param File is crucial)
         self.P,self.Temp = self.set_rxnconditions() #Setting reaction conditions (defaulted to values from the Param File but can also be set mannually )
-        
+
+        self.All_species = list(self.Atomic.columns.values[1:])      
+        self.Surface_species = list(self.Atomic.columns.values[1+len(self.P):])
+        self.Gas_species = self.All_species[:len(self.P)]
+        self.Reactions = list(np.array(self.Stoich.iloc[:,0]))
+
         self.Thermo_Constraint='OFF'
         self.Keq_setting = 'pseudo'#Sets the Keq to be calculated straight from the rate constants
         self.Stoichiometric_numbers = self.Stoich_number_extract()
@@ -125,6 +130,7 @@ class MKModel:
         for j in np.arange(len(self.Param.iloc[:,0])): #looping through second column
             if ('P' in self.Param.iloc[j,1]):  #checking the first and second columns
                 vecP.append(self.Param.iloc[j,2])
+                            
         return np.array(vecP) #Converts from list to array
     #------------------------------------------------------------------------------------------------------------------------------
     def kextract(self): #Function used for extracting rate constants from the Param File
@@ -462,7 +468,7 @@ class MKModel:
         if plot==False:
             return rates_r,covgt
         elif plot==True:
-            self.plotting(rates_r,covgt,self.label)
+            self.plotting(rates_r,covgt,self.label,Species)
             return rates_r,covgt
     #------------------------------------------------------------------------------------------------------------------------------
     def solve_rate_production(self,tf=None,Tf_eval=[],initial_coverage=[],plot=False,isolate=None): #Function used for calculating (and plotting) single state transient rates of production
@@ -512,19 +518,19 @@ class MKModel:
         
         msg='Steady State Reached'
         if feature=='coverage': 
-            if all(x < 1e-2 for x in steady_diff):
+            if all(x < 1e-4 for x in steady_diff):
                 return (end,msg)
             else:
                 msg = 'Warning: STEADY STATE MAY NOT HAVE BEEN REACHED. Difference in a set of last two coverage terms is NOT less than 1e-2.Last terms are returned anyways.'
                 return (end,msg)
         elif feature=='rates_reaction': 
-            if all(x < 1e-7 for x in steady_diff):
+            if all(x < 1e-8 for x in steady_diff):
                 return (end,msg)
             else:
                 msg = 'Warning: STEADY STATE MAY NOT HAVE BEEN REACHED. Difference in a set of last two rates of reaction terms is NOT less than 1e-7. Last terms are returned anyways.'
                 return (end,msg)
         elif feature=='rates_production': 
-            if all(x < 1e-7 for x in steady_diff):
+            if all(x < 1e-8 for x in steady_diff):
                 return (end,msg)
             else:
                 msg = 'Warning: STEADY STATE MAY NOT HAVE BEEN REACHED. Difference in a set of last two rates of production terms is NOT less than 1e-7. Last terms are returned anyways.'
