@@ -38,10 +38,10 @@ class MKModel:
         self.k = self.kextract()    #Extracting the rate constants from the Param File (Note that format of the Param File is crucial)
         self.P,self.Temp = self.set_rxnconditions() #Setting reaction conditions (defaulted to values from the Param File but can also be set mannually )
 
-        self.All_species = list(self.Atomic.columns.values[1:])      
-        self.Surface_species = list(self.Atomic.columns.values[1+len(self.P):])
-        self.Gas_species = self.All_species[:len(self.P)]
-        self.Reactions = list(np.array(self.Stoich.iloc[:,0]))
+        self.All_species = self.Species(target = "All")      
+        self.Surface_species = self.Species(target = "Surface_species")
+        self.Gas_species = self.Species(target = "Gas_species")
+        self.Reactions = self.Species(target = "Reactions")
 
         self.Thermo_Constraint='OFF'
         self.Keq_setting = 'pseudo'#Sets the Keq to be calculated straight from the rate constants
@@ -117,7 +117,10 @@ class MKModel:
             
     #------------------------------------------------------------------------------------------------------------------------------        
     def check_coverages(self,vec):  #Function to check if the coverages being inputted make sense (Note in this code empty sites are not inputted, they're calculated automatically)
-        if (np.round(float(np.sum(vec)),0))!=1 or (all(x >= 0 for x in vec)!=True) or (all(x <= 1 for x in vec)!=True):
+        
+        vec = [0.0 if x < 1e-20 else x for x in vec]   #np.array([0.0 if x < 1e-20 else x for x in np.any(covg)]) #Helpful for restart cases #bandaid fix
+
+        if (np.round(float(np.sum(vec)),0))!=1.0 or (all(x >= 0 for x in vec)!=True) or (all(x <= 1 for x in vec)!=True):
             raise Exception('Error: The initial coverages entered are not valid. Issues may include:'
                             '\n 1. Sum of initial coverages enetered does not add up to 1 ; '
                             '\n 2. Initial coverages enetered has a number X>1 or X<0 ;'
@@ -180,6 +183,22 @@ class MKModel:
 
         self.Coeff = Coeff   #Object to be used for rate determiniing and covg dependent rate coeff.     
         return Coeff
+    #------------------------------------------------------------------------------------------------------------------------------    
+    def Species(self, target = "All", e_sites=['*']):
+        all_species = list(self.Atomic.columns.values[1:])
+        if target == 'All':
+            return all_species   
+        elif target == 'Gas_species':
+            gas_species = [string for string in all_species if not any(char in string for char in e_sites)]
+            return gas_species
+        elif target == 'Surface_species':
+            surface_species = [string for string in all_species if any(char in string for char in e_sites)]
+            return surface_species
+        elif target == 'Reactions':
+            reactions = list(np.array(self.Stoich.iloc[:,0]))
+            return reactions
+        else:
+            raise Exception("Unknown Target Entered")
     #------------------------------------------------------------------------------------------------------------------------------
     def Stoich_number_extract(self):
         #Check for dependency i.e parallel reactions
@@ -200,8 +219,7 @@ class MKModel:
         if rank != min(Stoich.shape):
             enablePrint()
             print("WARNING: The stoichiometric matrix is Linearly Dependent.\n The following steps have parallel reactions:\n",dependent_rows,"\n These should be ignored when fitting  ")
-            blockPrint()
-        
+
         n_space = null_space(Stoich_adsorbate_matrix)
         if len(n_space)>1:
             matrix = np.max(np.abs(n_space)) #Maximum value to be used to provide scaled stoichiometric numbers from the null space
@@ -381,7 +399,7 @@ class MKModel:
         else:
             return D
     #------------------------------------------------------------------------------------------------------------------------------      
-    def solve_coverage(self,t=[],initial_cov=[],method='BDF',Tf_eval=[],full_output=False,plot=False,isolate=None): #Function used for calculating (and plotting) single state transient coverages
+    def solve_coverage(self,t=[],initial_coverage=[],method='BDF',Tf_eval=[],full_output=False,plot=False,isolate=None): #Function used for calculating (and plotting) single state transient coverages
         #Function used for solving the resulting ODEs and obtaining the corresponding surface coverages as a function of time
         if t==[]:  #Condition to make sure default time is what was set initially (from self.set_limits_of_integration()) and if a different time range is entered, it will be set as the default time limits of integration
             t=[self.Ti,self.Tf]  
@@ -390,10 +408,10 @@ class MKModel:
 
         t_span = (t[0],t[1]) #Necessary for ODE Solver
         
-        if initial_cov==[]: #Condition to make sure default initial condition is what was set initially (from self.set_initial_coverages()) and if  different initial coverages are entered, they will be set as the default intial ccoverages
-            init = self.init_cov
+        if initial_coverage==[]: #Condition to make sure default initial condition is what was set initially (from self.set_initial_coverages()) and if  different initial coverages are entered, they will be set as the default intial ccoverages
+            initial_coverage = self.init_cov
         else:
-            init = self.set_initial_coverages(initial_cov)
+            self.set_initial_coverages(initial_coverage)
                         
         #Necessary to allow Teval to be set by simply entering Tf_eval which would correspond to the end of the range
         if Tf_eval==[]:
@@ -403,7 +421,7 @@ class MKModel:
 
         reltol=self.rtol
         abstol=self.atol    
-        solve = solve_ivp(self.get_ODEs,t_span,init,method,t_eval=T_eval,rtol=reltol,atol=abstol,dense_output=full_output) #ODE Solver
+        solve = solve_ivp(self.get_ODEs,t_span,initial_coverage,method,t_eval=T_eval,rtol=reltol,atol=abstol,dense_output=full_output) #ODE Solver
         
         #COnvergence Check
         if solve.status!=0:
@@ -418,7 +436,7 @@ class MKModel:
         solt = np.transpose(solve.t)
         
         self.label='coverages'
-        all_species = list(self.Atomic.columns.values[1+len(self.P):])
+        all_species = self.Surface_species
         if isolate == None:
             Species = all_species
         else:
@@ -446,7 +464,12 @@ class MKModel:
         else:
             T_eval=Tf_eval
         
-        covg,covgt =self.solve_coverage(t=[self.Ti,tf],initial_cov=initial_coverage,Tf_eval=T_eval)
+        if initial_coverage==[]: #Condition to make sure default initial condition is what was set initially (from self.set_initial_coverages()) and if  different initial coverages are entered, they will be set as the default intial ccoverages
+            initial_coverage = self.init_cov
+        else:
+            self.set_initial_coverages(initial_coverage)
+
+        covg,covgt =self.solve_coverage(t=[self.Ti,tf],initial_coverage=initial_coverage,Tf_eval=T_eval)
         rates_r = []
         for t in np.arange(len(covgt)):
             rates_r.append(self.get_rates(cov = covg[t,:]))
@@ -454,7 +477,7 @@ class MKModel:
         rates_r = np.array(rates_r)
         
         self.label='rates_r'
-        all_species = list(np.array(self.Stoich.iloc[:,0]))
+        all_species = self.Reactions
         if isolate == None:
             Species = all_species
         else:
@@ -482,7 +505,12 @@ class MKModel:
         else:
             T_eval=Tf_eval
 
-        covg,covgt =self.solve_coverage(t=[self.Ti,tf],initial_cov=initial_coverage,Tf_eval=T_eval)
+        if initial_coverage==[]: #Condition to make sure default initial condition is what was set initially (from self.set_initial_coverages()) and if  different initial coverages are entered, they will be set as the default intial ccoverages
+            initial_coverage = self.init_cov
+        else:
+            self.set_initial_coverages(initial_coverage)
+
+        covg,covgt =self.solve_coverage(t=[self.Ti,tf],initial_coverage=initial_coverage,Tf_eval=T_eval)
         rates_p = []
         for t in np.arange(len(covgt)):
             rates_p.append(self.get_ODEs(covgt[t],covg[t,:],coverage=False))
@@ -490,7 +518,7 @@ class MKModel:
         rates_p = np.array(rates_p)
         
         self.label='rates_p'
-        all_species = list(self.Atomic.columns.values[1:])
+        all_species = self.Gas_species
         if isolate == None:
             Species = all_species
         else:
@@ -536,28 +564,43 @@ class MKModel:
                 msg = 'Warning: STEADY STATE MAY NOT HAVE BEEN REACHED. Difference in a set of last two rates of production terms is NOT less than 1e-7. Last terms are returned anyways.'
                 return (end,msg)
     #------------------------------------------------------------------------------------------------------------------------------
-    def get_SS_coverages(self,tf=None,Tf_eval=[],print_warning=True,isolate=None): #Function used for calculating the steady state coverages
+    def get_SS_coverages(self,tf=None,Tf_eval=[], initial_coverage=[], print_warning=True,isolate=None): #Function used for calculating the steady state coverages
         if tf==None:
             tf=self.Tf
 
-        covg,covgt = self.solve_coverage(t=[self.Ti,tf],Tf_eval=Tf_eval,isolate=isolate)
-        
+        if initial_coverage==[]: #Condition to make sure default initial condition is what was set initially (from self.set_initial_coverages()) and if  different initial coverages are entered, they will be set as the default intial ccoverages
+            initial_coverage = self.init_cov
+        else:
+            self.set_initial_coverages(initial_coverage)
+
+        covg,covgt = self.solve_coverage(t=[self.Ti,tf],Tf_eval=Tf_eval,initial_coverage=initial_coverage,isolate=isolate)
         SS,msg = self.check_SS(covg,feature='coverage')
 
         if print_warning!=False:
             print(msg)
         return SS
     #------------------------------------------------------------------------------------------------------------------------------    
-    def get_SS_rates_reaction(self,tf=None,Tf_eval=[],print_warning=True,isolate=None): #Function used for calculating the steady state rates of reaction
-        rates_r,time_r = self.solve_rate_reaction(tf=tf,Tf_eval=Tf_eval,isolate=isolate)
+    def get_SS_rates_reaction(self,tf=None,Tf_eval=[], initial_coverage=[],print_warning=True,isolate=None): #Function used for calculating the steady state rates of reaction
+        if initial_coverage==[]: #Condition to make sure default initial condition is what was set initially (from self.set_initial_coverages()) and if  different initial coverages are entered, they will be set as the default intial ccoverages
+            initial_coverage = self.init_cov
+        else:
+            self.set_initial_coverages(initial_coverage)
+
+        rates_r,time_r = self.solve_rate_reaction(tf=tf,Tf_eval=Tf_eval,initial_coverage=initial_coverage,isolate=isolate)
         
         SS,msg = self.check_SS(rates_r,feature='rates_reaction')
         if print_warning!=False:
             print(msg)
         return SS
     #------------------------------------------------------------------------------------------------------------------------------
-    def get_SS_rates_production(self,tf=None,Tf_eval=[],print_warning=True,isolate=None): #Function used for calculating the steady state rates of production
-        rates_p,time_R = self.solve_rate_production(tf=tf,Tf_eval=Tf_eval,isolate=isolate)  
+    def get_SS_rates_production(self,tf=None,Tf_eval=[], initial_coverage=[],print_warning=True,isolate=None): #Function used for calculating the steady state rates of production
+        
+        if initial_coverage==[]: #Condition to make sure default initial condition is what was set initially (from self.set_initial_coverages()) and if  different initial coverages are entered, they will be set as the default intial ccoverages
+            initial_coverage = self.init_cov
+        else:
+            self.set_initial_coverages(initial_coverage)
+
+        rates_p,time_R = self.solve_rate_production(tf=tf,Tf_eval=Tf_eval,initial_coverage=initial_coverage,isolate=isolate)  
         
         SS,msg = self.check_SS(rates_p,feature='rates_production')
         if print_warning!=False:
@@ -606,8 +649,6 @@ class MKModel:
             Xrc.append((rnew[rxn]-ro)/(ro*p_inc))
         
         self.k = np.array(k_o)
-        # print(self.k)    
-        # blockPrint()
                         
         return Xrc
     
@@ -662,7 +703,7 @@ class MKModel:
 
             self.label = label
             if self.label == 'coverages':
-                solb,soltb=self.solve_coverage(initial_cov=Initial_Covg)
+                solb,soltb=self.solve_coverage(initial_coverage=Initial_Covg)
             elif self.label == 'rates_p':
                 solb,soltb=self.solve_rate_production(initial_coverage=Initial_Covg)
             elif self.label == 'rates_r':
@@ -944,7 +985,6 @@ class Fitting:
                 for i in np.arange(len(Pr_header)): x.append(i)
                 list = [x]
                 print(pd.DataFrame(list,columns=Pr_header, index=['Array order']))
-                blockPrint()
                 return
                  
             elif Param=='Coverage':
@@ -955,7 +995,6 @@ class Fitting:
                 for i in np.arange(len(Covg_header)): x.append(i)
                 list = [x]
                 print(pd.DataFrame(list,columns=Covg_header, index=['Array order']))
-                blockPrint()
                 return 
 
             elif Param=='Rates_Production':
@@ -966,7 +1005,6 @@ class Fitting:
                 for i in np.arange(len(Rp_header)): x.append(i)
                 list = [x]
                 print(pd.DataFrame(list,columns=Rp_header, index=['Array order']))
-                blockPrint()
                 return 
 
             elif Param=='Rates_Reaction':
@@ -977,7 +1015,6 @@ class Fitting:
                 for i in np.arange(len(Rr_header)): x.append(i)
                 list = [x]
                 print(pd.DataFrame(list,columns=Rr_header, index=['Array order']))
-                blockPrint()
                 return
 
             elif Param=='Rate_Constants':
@@ -990,7 +1027,6 @@ class Fitting:
                 for i in np.arange(len(params_header)): x.append(i)
                 list = [x]
                 print(pd.DataFrame(list,columns=params_header, index=['Array order']))
-                blockPrint()
                 return 
 
     #------------------------------------------------------------------------------------------------------------------------------    
