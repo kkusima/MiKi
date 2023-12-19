@@ -542,23 +542,23 @@ class MKModel:
         length = np.shape(trans_vec)[0]
         end = trans_vec[-1,:]
         end_prev = trans_vec[-int(np.round(length*tol)),:]
-        steady_diff = np.abs(end-end_prev)/end
+        steady_diff = np.abs(end-end_prev)
         
         msg='Steady State Reached'
         if feature=='coverage': 
-            if all(x < 1e-1 for x in steady_diff):
+            if all(x < 1e-4 for x in steady_diff):
                 return (end,msg)
             else:
                 msg = 'Warning: STEADY STATE MAY NOT HAVE BEEN REACHED. Difference in a set of last two coverage terms is NOT less than 1e-2.Last terms are returned anyways.'
                 return (end,msg)
         elif feature=='rates_reaction': 
-            if all(x < 1e-1 for x in steady_diff):
+            if all(x < 1e-8 for x in steady_diff):
                 return (end,msg)
             else:
                 msg = 'Warning: STEADY STATE MAY NOT HAVE BEEN REACHED. Difference in a set of last two rates of reaction terms is NOT less than 1e-7. Last terms are returned anyways.'
                 return (end,msg)
         elif feature=='rates_production': 
-            if all(x < 1e-1 for x in steady_diff):
+            if all(x < 1e-8 for x in steady_diff):
                 return (end,msg)
             else:
                 msg = 'Warning: STEADY STATE MAY NOT HAVE BEEN REACHED. Difference in a set of last two rates of production terms is NOT less than 1e-7. Last terms are returned anyways.'
