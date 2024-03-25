@@ -234,7 +234,7 @@ class MKModel:
                 raise Exception("Need to enter the actual overall reaction Equilibrium constant")
     #------------------------------------------------------------------------------------------------------------------------------
     def set_initial_coverages(self,init=[]): #empty sites included at the end of the code 
-        mp.dps= self.dplace
+        mp.dps= self.dplace #mpmath deimal setting
         
         ExpNoCovg = len(self.Stoich.iloc[0,len(self.P)+1:])
         if init==[]: 
