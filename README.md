@@ -2,8 +2,8 @@
 [![Software License](https://img.shields.io/badge/license-GPL--3.0%20license-red)](https://github.com/kkusima/MiKi/blob/main/LICENSE.md)
 [![Documentation Status](https://img.shields.io/badge/Documentation%20Status-complete-red)](https://github.com/kkusima/MiKi/wiki)
 
-# MiKi
-## Microkinetic Model
+# DyMiKi
+## Dynamic Microkinetic Modeling Toolkit
 
 ## [Link to Corresponding Wiki](https://github.com/kkusima/MiKi/wiki)
 
